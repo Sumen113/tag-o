@@ -8,7 +8,7 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-const TICK_RATE = 60;
+const TICK_RATE = 20;
 const GAME_DURATION = 180;
 const JUMP_FORCE = -0.02;
 const GRAVITY = 0.001;
@@ -322,20 +322,17 @@ io.on("connection", socket => {
 
   const MOVE_ACCEL = 0.0005; // tweak for acceleration speed
 
-  socket.on("input", data => {
+  socket.on("move", dir => {
     const p = players[socket.id];
     if (!p) return;
-  
-    if (data.input === "left") p.vx -= MOVE_ACCEL;
-    if (data.input === "right") p.vx += MOVE_ACCEL;
-    if (data.input === "jump" && p.onGround) {
+
+    if (dir === "left") p.vx -= MOVE_ACCEL;
+    if (dir === "right") p.vx += MOVE_ACCEL;
+    if (dir === "jump" && p.onGround) {
       p.vy = JUMP_FORCE;
       p.onGround = false;
     }
-  
-    // ✅ Add last processed input for reconciliation
-    p.lastProcessedInput = data.seq;
-  });  
+  });
 
   socket.on("useAbility", () => {
     const p = players[socket.id];
