@@ -11,6 +11,9 @@ let itPlayer = null;
 let countdown = null;
 let timer = 0;
 
+const CLIENT_MOVE_ACCEL = 0.0005;
+const CLIENT_FRICTION = 0.85;
+
 let inputSeq = 0;
 let pendingInputs = [];
 
@@ -147,15 +150,17 @@ socket.on("state", data => {
       pendingInputs = pendingInputs.filter(inp => inp.seq > (serverMe.lastProcessedInput || 0));
     
       // Reapply unprocessed inputs
+      // Reapply unprocessed inputs (X only)
       for (let inp of pendingInputs) {
-        if (inp.left) me.vx -= 0.0005;
-        if (inp.right) me.vx += 0.0005;
-        if (inp.jump && me.onGround) {
-          me.vy = -0.02;
-          me.onGround = false;
-        }
-        applyLocalPhysics(me);
+        if (inp.left) me.vx -= CLIENT_MOVE_ACCEL;
+        if (inp.right) me.vx += CLIENT_MOVE_ACCEL;
+        applyLocalPhysicsX(me); // X-only integration
       }
+
+      // Y stays 100% server authoritative:
+      me.y = serverMe.y;
+      me.vy = serverMe.vy;
+      me.onGround = serverMe.onGround;
     
       players[id] = me;
     } else {
@@ -224,26 +229,11 @@ function handleInput() {
   const me = players[socket.id];
   if (!me) return;
 
-  const MOVE_ACCEL = 0.0005;
-  if (keys['ArrowLeft'] || keys['KeyA']) me.vx -= MOVE_ACCEL;
-  if (keys['ArrowRight'] || keys['KeyD']) me.vx += MOVE_ACCEL;
-  if ((keys['ArrowUp'] || keys['KeyW']) && me.onGround) {
-    me.vy = -0.02; // same as JUMP_FORCE
-    me.onGround = false;
-  }
-}
+  if (keys['ArrowLeft'] || keys['KeyA']) me.vx -= CLIENT_MOVE_ACCEL;
+  if (keys['ArrowRight'] || keys['KeyD']) me.vx += CLIENT_MOVE_ACCEL;
 
-function applyLocalPhysics(p) {
-  if (!p) return;
-  const GRAVITY = 0.001;
-  const FRICTION = 0.85;
-
-  p.vy += GRAVITY;
-  p.y += p.vy;
-  p.x += p.vx;
-  p.vx *= FRICTION;
-
-
+  // Do NOT modify me.vy / me.y here.
+  // Jump is still sent to the server below; server applies it authoritatively.
 }
 
 function gameLoop() {
