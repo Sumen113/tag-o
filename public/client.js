@@ -148,6 +148,8 @@ socket.on('state', data => {
       localPlayer.x += dx * 0.1;
       localPlayer.y += dy * 0.1;
     }
+    
+    localPlayer.onGround = serverP.onGround;    
   }  
   platforms = data.platforms;
   portals = data.portals || [];
@@ -444,63 +446,21 @@ if (joined && localPlayer) {
     socket.emit('move', 'jump');
   }
 
-  // === CLIENT PREDICTION PHYSICS (mirrors server.js applyPhysics) ===
+  // Apply physics (client-side)
   localPlayer.vy += GRAVITY;
+  localPlayer.x += localPlayer.vx;
   localPlayer.y += localPlayer.vy;
-  localPlayer.onGround = false;
+  localPlayer.vx *= FRICTION;
 
-  // Ground collision
+  // Keep inside bounds (same as server)
+  localPlayer.x = Math.max(localPlayer.radius - 0.13, Math.min(1.08 - localPlayer.radius, localPlayer.x));
+
+  // Simple ground check
   if (localPlayer.y + localPlayer.radius > 1 - 0.1) {
     localPlayer.y = 1 - 0.1 - localPlayer.radius;
     localPlayer.vy = 0;
     localPlayer.onGround = true;
   }
-
-  // Platform collisions
-  platforms.forEach(pl => {
-    if (localPlayer.x + localPlayer.radius > pl.x && localPlayer.x - localPlayer.radius < pl.x + pl.w) {
-      // Landing on platform (from above)
-      if (localPlayer.y + localPlayer.radius > pl.y &&
-          localPlayer.y + localPlayer.radius < pl.y + pl.h + 0.01 &&
-          localPlayer.vy >= 0) {
-        localPlayer.y = pl.y - localPlayer.radius;
-        localPlayer.vy = 0;
-        localPlayer.onGround = true;
-
-        // Move with horizontal moving platform
-        if (pl.type === "moving" && pl.direction === "horizontal") {
-          localPlayer.x += pl.speed;
-        }
-      }
-      // Hitting head (from below)
-      else if (localPlayer.y - localPlayer.radius < pl.y + pl.h &&
-               localPlayer.y - localPlayer.radius > pl.y &&
-               localPlayer.vy < 0) {
-        localPlayer.y = pl.y + pl.h + localPlayer.radius;
-        localPlayer.vy = 0;
-      }
-    }
-  });
-
-  // Jump pad collisions
-  jumpPads.forEach(jp => {
-    if (
-      localPlayer.x + localPlayer.radius > jp.x &&
-      localPlayer.x - localPlayer.radius < jp.x + jp.w &&
-      localPlayer.y + localPlayer.radius > jp.y &&
-      localPlayer.y + localPlayer.radius < jp.y + jp.h + 0.01 &&
-      localPlayer.vy >= 0
-    ) {
-      localPlayer.vy = jp.power;
-    }
-  });
-
-  // Horizontal motion + friction
-  localPlayer.x += localPlayer.vx;
-  localPlayer.vx *= FRICTION;
-
-  // Bounds
-  localPlayer.x = Math.max(localPlayer.radius - 0.13, Math.min(1.08 - localPlayer.radius, localPlayer.x));
 }
 
   requestAnimationFrame(gameLoop);
