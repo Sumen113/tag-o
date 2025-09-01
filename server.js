@@ -322,17 +322,17 @@ io.on("connection", socket => {
 
   const MOVE_ACCEL = 0.0005; // tweak for acceleration speed
 
-  socket.on("input", data => {
+  socket.on("move", dir => {
     const p = players[socket.id];
     if (!p) return;
-  
-    if (data.left)  p.vx -= MOVE_ACCEL;
-    if (data.right) p.vx += MOVE_ACCEL;
-    if (data.jump && p.onGround) {
+
+    if (dir === "left") p.vx -= MOVE_ACCEL;
+    if (dir === "right") p.vx += MOVE_ACCEL;
+    if (dir === "jump" && p.onGround) {
       p.vy = JUMP_FORCE;
       p.onGround = false;
     }
-  });  
+  });
 
   socket.on("useAbility", () => {
     const p = players[socket.id];

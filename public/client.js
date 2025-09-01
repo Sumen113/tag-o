@@ -139,17 +139,15 @@ socket.on('state', data => {
     const dx = serverP.x - localPlayer.x;
     const dy = serverP.y - localPlayer.y;
     
-    // Correct X smoothly always
-    localPlayer.x += dx * 0.1;
-    
-    // Correct Y only when on ground (to stop jitter in air)
-    if (serverP.onGround) {
-      if (Math.abs(dy) > 0.05) {
-        localPlayer.y = serverP.y;
-      } else {
-        localPlayer.y += dy * 0.1;
-      }
-    }    
+    if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
+      // snap if too far off
+      localPlayer.x = serverP.x;
+      localPlayer.y = serverP.y;
+    } else {
+      // gentle correction
+      localPlayer.x += dx * 0.1;
+      localPlayer.y += dy * 0.1;
+    }
   }  
   platforms = data.platforms;
   portals = data.portals || [];
@@ -431,24 +429,20 @@ if (joined && localPlayer) {
   const JUMP_FORCE = -0.02;
   const FRICTION = 0.85;
 
-  // Only apply locally — don’t stack with server impulses
+  // Apply inputs
   if (keys['ArrowLeft'] || keys['KeyA']) {
     localPlayer.vx -= MOVE_ACCEL;
+    socket.emit('move', 'left');
   }
   if (keys['ArrowRight'] || keys['KeyD']) {
     localPlayer.vx += MOVE_ACCEL;
+    socket.emit('move', 'right');
   }
   if ((keys['ArrowUp'] || keys['KeyW']) && localPlayer.onGround) {
     localPlayer.vy = JUMP_FORCE;
     localPlayer.onGround = false;
+    socket.emit('move', 'jump');
   }
-
-  // Send input state ONCE per frame
-  socket.emit("input", {
-    left: keys['ArrowLeft'] || keys['KeyA'],
-    right: keys['ArrowRight'] || keys['KeyD'],
-    jump: keys['ArrowUp'] || keys['KeyW']
-  });
 
   // === CLIENT PREDICTION PHYSICS (mirrors server.js applyPhysics) ===
   localPlayer.vy += GRAVITY;
