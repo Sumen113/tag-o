@@ -77,14 +77,7 @@ joinBtn.addEventListener('click', () => {
   joined = true;
 
   // Start with local prediction copy
-  localPlayer = { 
-    x: 0.5, 
-    y: 0.5, 
-    vx: 0, 
-    vy: 0, 
-    radius: 0.02, 
-    onGround: false 
-  };  
+  localPlayer = { x: 0.5, y: 0.5, vx: 0, vy: 0 };
 });
 
 
@@ -136,20 +129,8 @@ socket.on('state', data => {
   players = data.players;
   if (localPlayer && players[socket.id]) {
     const serverP = players[socket.id];
-    const dx = serverP.x - localPlayer.x;
-    const dy = serverP.y - localPlayer.y;
-    
-    if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
-      // snap if too far off
-      localPlayer.x = serverP.x;
-      localPlayer.y = serverP.y;
-    } else {
-      // gentle correction
-      localPlayer.x += dx * 0.1;
-      localPlayer.y += dy * 0.1;
-    }
-    
-    localPlayer.onGround = serverP.onGround;    
+    localPlayer.x += (serverP.x - localPlayer.x) * 0.2;
+    localPlayer.y += (serverP.y - localPlayer.y) * 0.2;
   }  
   platforms = data.platforms;
   portals = data.portals || [];
@@ -426,40 +407,19 @@ for (let id in players) {
 
 // Movement + prediction
 if (joined && localPlayer) {
-  const MOVE_ACCEL = 0.0005; // matches server
-  const GRAVITY = 0.001;
-  const JUMP_FORCE = -0.02;
-  const FRICTION = 0.85;
+  const MOVE_SPEED = 0.008; // faster for instant response
 
-  // Apply inputs
   if (keys['ArrowLeft'] || keys['KeyA']) {
-    localPlayer.vx -= MOVE_ACCEL;
+    localPlayer.x -= MOVE_SPEED;
     socket.emit('move', 'left');
   }
   if (keys['ArrowRight'] || keys['KeyD']) {
-    localPlayer.vx += MOVE_ACCEL;
+    localPlayer.x += MOVE_SPEED;
     socket.emit('move', 'right');
   }
-  if ((keys['ArrowUp'] || keys['KeyW']) && localPlayer.onGround) {
-    localPlayer.vy = JUMP_FORCE;
-    localPlayer.onGround = false;
+  if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) {
+    localPlayer.y -= 0.03; // jump instantly on your screen
     socket.emit('move', 'jump');
-  }
-
-  // Apply physics (client-side)
-  localPlayer.vy += GRAVITY;
-  localPlayer.x += localPlayer.vx;
-  localPlayer.y += localPlayer.vy;
-  localPlayer.vx *= FRICTION;
-
-  // Keep inside bounds (same as server)
-  localPlayer.x = Math.max(localPlayer.radius - 0.13, Math.min(1.08 - localPlayer.radius, localPlayer.x));
-
-  // Simple ground check
-  if (localPlayer.y + localPlayer.radius > 1 - 0.1) {
-    localPlayer.y = 1 - 0.1 - localPlayer.radius;
-    localPlayer.vy = 0;
-    localPlayer.onGround = true;
   }
 }
 
