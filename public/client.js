@@ -11,6 +11,9 @@ let itPlayer = null;
 let countdown = null;
 let timer = 0;
 
+let inputSequence = 0;
+let pendingInputs = [];
+
 const abilityUI = document.getElementById("ability-ui");
 const abilityName = document.getElementById("ability-name");
 const abilityTimer = document.getElementById("ability-timer");
@@ -117,16 +120,38 @@ function startAbilityCooldownUI(name) {
 
 // Server updates
 let portals = [];
-
 let jumpPads = [];
 
-
 socket.on('state', data => {
-  players = data.players;
   platforms = data.platforms;
   portals = data.portals || [];
   jumpPads = data.jumpPads || [];
   itPlayer = data.itPlayer;
+
+  // For other players: interpolate
+  for (let id in data.players) {
+    if (id !== socket.id) {
+      if (!players[id]) players[id] = data.players[id];
+      players[id].x += (data.players[id].x - players[id].x) * 0.2;
+      players[id].y += (data.players[id].y - players[id].y) * 0.2;
+    }
+  }
+
+  // For local player: reconciliation
+  const serverPlayer = data.players[socket.id];
+  if (serverPlayer) {
+    if (!players[socket.id]) players[socket.id] = serverPlayer;
+    players[socket.id].x = serverPlayer.x;
+    players[socket.id].y = serverPlayer.y;
+
+    // Remove processed inputs
+    pendingInputs = pendingInputs.filter(input => input.seq > serverPlayer.lastProcessedInput);
+
+    // Reapply unprocessed inputs
+    for (const input of pendingInputs) {
+      applyInput(players[socket.id], input.input);
+    }
+  }
 });
 
 socket.on('countdown', cd => countdown = cd);
@@ -181,6 +206,20 @@ function worldToScreen(wx, wy) {
   return { x: screenX, y: screenY };
 }
 
+function sendInput(input) {
+  inputSequence++;
+  const data = { input, seq: inputSequence };
+  pendingInputs.push(data);
+  socket.emit('input', data);
+  if (players[socket.id]) applyInput(players[socket.id], input);
+}
+
+function applyInput(player, input) {
+  if (!player) return;
+  if (input === 'left') player.x -= 0.005; // adjust speed to match server
+  if (input === 'right') player.x += 0.005;
+  if (input === 'jump') player.y -= 0.02;
+}
 
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -394,11 +433,11 @@ for (let id in players) {
   }
 
   // Movement
-  if (joined) {
-    if (keys['ArrowLeft'] || keys['KeyA']) socket.emit('move', 'left');
-    if (keys['ArrowRight'] || keys['KeyD']) socket.emit('move', 'right');
-    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) socket.emit('move', 'jump');
-  }
+  if (joined && players[socket.id]) {
+    if (keys['ArrowLeft'] || keys['KeyA']) sendInput('left');
+    if (keys['ArrowRight'] || keys['KeyD']) sendInput('right');
+    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id].onGround) sendInput('jump');
+  }  
 
   requestAnimationFrame(gameLoop);
 }
