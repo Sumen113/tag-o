@@ -6,6 +6,7 @@ let joined = false;
 let name = '';
 let playerClass = '';
 let players = {};
+let localPlayer = null; // prediction state for yourself
 let platforms = [];
 let itPlayer = null;
 let countdown = null;
@@ -74,6 +75,9 @@ joinBtn.addEventListener('click', () => {
   setTimeout(() => joinScreen.style.display = 'none', 1000);
 
   joined = true;
+
+  // Start with local prediction copy
+  localPlayer = { x: 0.5, y: 0.5, vx: 0, vy: 0 };
 });
 
 
@@ -123,6 +127,11 @@ let jumpPads = [];
 
 socket.on('state', data => {
   players = data.players;
+  if (localPlayer && players[socket.id]) {
+    const serverP = players[socket.id];
+    localPlayer.x += (serverP.x - localPlayer.x) * 0.2;
+    localPlayer.y += (serverP.y - localPlayer.y) * 0.2;
+  }  
   platforms = data.platforms;
   portals = data.portals || [];
   jumpPads = data.jumpPads || [];
@@ -281,7 +290,10 @@ function gameLoop() {
 for (let id in players) {
   const p = players[id];
   if (id !== socket.id && p.invisible) continue; // skip drawing invisible players (but not yourself)  
-  const pos = worldToScreen(p.x, p.y);
+  const pos = worldToScreen(
+    id === socket.id && localPlayer ? localPlayer.x : p.x,
+    id === socket.id && localPlayer ? localPlayer.y : p.y
+  );  
   const radius = p.radius * camera.zoom * canvas.height;
   
   if (id === socket.id && p.invisible) {
@@ -393,12 +405,23 @@ for (let id in players) {
     ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2);
   }
 
-  // Movement
-  if (joined) {
-    if (keys['ArrowLeft'] || keys['KeyA']) socket.emit('move', 'left');
-    if (keys['ArrowRight'] || keys['KeyD']) socket.emit('move', 'right');
-    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) socket.emit('move', 'jump');
+// Movement + prediction
+if (joined && localPlayer) {
+  const MOVE_SPEED = 0.008; // faster for instant response
+
+  if (keys['ArrowLeft'] || keys['KeyA']) {
+    localPlayer.x -= MOVE_SPEED;
+    socket.emit('move', 'left');
   }
+  if (keys['ArrowRight'] || keys['KeyD']) {
+    localPlayer.x += MOVE_SPEED;
+    socket.emit('move', 'right');
+  }
+  if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) {
+    localPlayer.y -= 0.03; // jump instantly on your screen
+    socket.emit('move', 'jump');
+  }
+}
 
   requestAnimationFrame(gameLoop);
 }
