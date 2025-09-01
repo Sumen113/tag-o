@@ -322,13 +322,13 @@ io.on("connection", socket => {
 
   const MOVE_ACCEL = 0.0005; // tweak for acceleration speed
 
-  socket.on("move", dir => {
+  socket.on("inputState", input => {
     const p = players[socket.id];
     if (!p) return;
 
-    if (dir === "left") p.vx -= MOVE_ACCEL;
-    if (dir === "right") p.vx += MOVE_ACCEL;
-    if (dir === "jump" && p.onGround) {
+    if (input.left) p.vx -= MOVE_ACCEL;
+    if (input.right) p.vx += MOVE_ACCEL;
+    if (input.jump && p.onGround) {
       p.vy = JUMP_FORCE;
       p.onGround = false;
     }

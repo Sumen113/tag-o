@@ -120,9 +120,25 @@ let portals = [];
 
 let jumpPads = [];
 
-
-socket.on('state', data => {
-  players = data.players;
+socket.on("state", data => {
+  for (let id in data.players) {
+    if (id === socket.id) {
+      const me = players[id] || {};
+      const serverMe = data.players[id];
+      // Smooth correction instead of snapping
+      if (me.x !== undefined) {
+        me.x += (serverMe.x - me.x) * 0.2;
+        me.y += (serverMe.y - me.y) * 0.2;
+      } else {
+        me.x = serverMe.x;
+        me.y = serverMe.y;
+      }
+      Object.assign(me, serverMe);
+      players[id] = me;
+    } else {
+      players[id] = data.players[id];
+    }
+  }
   platforms = data.platforms;
   portals = data.portals || [];
   jumpPads = data.jumpPads || [];
@@ -181,6 +197,36 @@ function worldToScreen(wx, wy) {
   return { x: screenX, y: screenY };
 }
 
+function handleInput() {
+  const me = players[socket.id];
+  if (!me) return;
+
+  const MOVE_ACCEL = 0.0005;
+  if (keys['ArrowLeft'] || keys['KeyA']) me.vx -= MOVE_ACCEL;
+  if (keys['ArrowRight'] || keys['KeyD']) me.vx += MOVE_ACCEL;
+  if ((keys['ArrowUp'] || keys['KeyW']) && me.onGround) {
+    me.vy = -0.02; // same as JUMP_FORCE
+    me.onGround = false;
+  }
+}
+
+function applyLocalPhysics(p) {
+  if (!p) return;
+  const GRAVITY = 0.001;
+  const FRICTION = 0.85;
+
+  p.vy += GRAVITY;
+  p.y += p.vy;
+  p.x += p.vx;
+  p.vx *= FRICTION;
+
+  // Ground collision
+  if (p.y + p.radius > 1 - 0.1) {
+    p.y = 1 - 0.1 - p.radius;
+    p.vy = 0;
+    p.onGround = true;
+  }
+}
 
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -393,11 +439,18 @@ for (let id in players) {
     ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2);
   }
 
-  // Movement
   if (joined) {
-    if (keys['ArrowLeft'] || keys['KeyA']) socket.emit('move', 'left');
-    if (keys['ArrowRight'] || keys['KeyD']) socket.emit('move', 'right');
-    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) socket.emit('move', 'jump');
+    const me = players[socket.id];
+    if (me) {
+      handleInput();
+      applyLocalPhysics(me);
+    }
+
+    socket.emit("inputState", {
+      left: keys['ArrowLeft'] || keys['KeyA'],
+      right: keys['ArrowRight'] || keys['KeyD'],
+      jump: keys['ArrowUp'] || keys['KeyW']
+    });
   }
 
   requestAnimationFrame(gameLoop);
