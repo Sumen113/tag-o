@@ -8,7 +8,7 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-const TICK_RATE = 60;
+const TICK_RATE = 20;
 const GAME_DURATION = 180;
 const JUMP_FORCE = -0.02;
 const GRAVITY = 0.001;
