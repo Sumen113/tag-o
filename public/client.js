@@ -167,9 +167,9 @@ socket.on("state", data => {
       players[id] = { ...players[id], ...data.players[id] }; // merge, don’t replace
     }    
   }
-  platforms = data.platforms;
-  portals = data.portals || [];
-  jumpPads = data.jumpPads || [];
+  platforms = [...data.platforms];
+  portals   = [...(data.portals || [])];
+  jumpPads  = [...(data.jumpPads || [])];  
   itPlayer = data.itPlayer;
 });
 

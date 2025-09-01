@@ -308,12 +308,12 @@ setInterval(() => {
 
     io.emit("state", {
       players: snapshotPlayers,
-      platforms,
-      portals,
-      jumpPads,
+      platforms: [...platforms],   // send full list
+      portals: [...portals],       // send current portals
+      jumpPads: [...jumpPads],     // send current jump pads
       gameRunning,
       itPlayer
-    });
+    });    
   }
 }, 1000 / TICK_RATE);
 
