@@ -11,6 +11,9 @@ let itPlayer = null;
 let countdown = null;
 let timer = 0;
 
+let inputSeq = 0;
+let pendingInputs = [];
+
 const abilityUI = document.getElementById("ability-ui");
 const abilityName = document.getElementById("ability-name");
 const abilityTimer = document.getElementById("ability-timer");
@@ -123,21 +126,34 @@ let jumpPads = [];
 socket.on("state", data => {
   for (let id in data.players) {
     if (id === socket.id) {
-      const me = players[id] || {};
       const serverMe = data.players[id];
-      // Smooth correction instead of snapping
-      if (me.x !== undefined) {
-        me.x += (serverMe.x - me.x) * 0.2;
-        me.y += (serverMe.y - me.y) * 0.2;
-      } else {
-        me.x = serverMe.x;
-        me.y = serverMe.y;
+      let me = players[id] || {};
+    
+      // Authoritative state from server
+      me.x = serverMe.x;
+      me.y = serverMe.y;
+      me.vx = serverMe.vx;
+      me.vy = serverMe.vy;
+      me.onGround = serverMe.onGround;
+    
+      // Remove inputs the server has already processed
+      pendingInputs = pendingInputs.filter(inp => inp.seq > (serverMe.lastProcessedInput || 0));
+    
+      // Re-apply unprocessed inputs
+      for (let inp of pendingInputs) {
+        if (inp.left) me.vx -= 0.0005;
+        if (inp.right) me.vx += 0.0005;
+        if (inp.jump && me.onGround) {
+          me.vy = -0.02;
+          me.onGround = false;
+        }
+        applyLocalPhysics(me);
       }
-      Object.assign(me, serverMe);
+    
       players[id] = me;
     } else {
       players[id] = data.players[id];
-    }
+    }    
   }
   platforms = data.platforms;
   portals = data.portals || [];
@@ -446,11 +462,14 @@ for (let id in players) {
       applyLocalPhysics(me);
     }
 
-    socket.emit("inputState", {
+    const input = {
       left: keys['ArrowLeft'] || keys['KeyA'],
       right: keys['ArrowRight'] || keys['KeyD'],
-      jump: keys['ArrowUp'] || keys['KeyW']
-    });
+      jump: keys['ArrowUp'] || keys['KeyW'],
+      seq: inputSeq++
+    };
+    socket.emit("inputState", input);
+    pendingInputs.push(input);    
   }
 
   requestAnimationFrame(gameLoop);

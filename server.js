@@ -332,6 +332,7 @@ io.on("connection", socket => {
       p.vy = JUMP_FORCE;
       p.onGround = false;
     }
+    p.lastProcessedInput = input.seq;
   });
 
   socket.on("useAbility", () => {
