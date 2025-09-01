@@ -296,7 +296,24 @@ setInterval(() => {
   if (gameRunning) {
     movePlatforms();
     applyPhysics();
-    io.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
+
+    // Send snapshot with lastProcessedInput
+    const snapshotPlayers = {};
+    for (let id in players) {
+      snapshotPlayers[id] = {
+        ...players[id],
+        lastProcessedInput: players[id].lastProcessedInput || 0
+      };
+    }
+
+    io.emit("state", {
+      players: snapshotPlayers,
+      platforms,
+      portals,
+      jumpPads,
+      gameRunning,
+      itPlayer
+    });
   }
 }, 1000 / TICK_RATE);
 
