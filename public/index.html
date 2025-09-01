@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Online Tag</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="join-screen">
+    <h1>Join Game</h1>
+    <input id="name" type="text" maxlength="12" placeholder="Enter your name">
+    <div class="class-choices">
+      <button class="class-option" data-class="ninja">
+        <img src="images/ninja.png" alt="Ninja">
+      </button>
+    </div>    
+
+    <button id="join-btn" disabled>Join</button>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="ability-ui" class="disabled">
+    <div id="ability-name">Invisibility</div>
+    <div id="ability-timer">Ready</div>
+  </div>
+  
+  <div id="overlay-message"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
