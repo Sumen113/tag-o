@@ -296,24 +296,7 @@ setInterval(() => {
   if (gameRunning) {
     movePlatforms();
     applyPhysics();
-
-    // Send snapshot with lastProcessedInput
-    const snapshotPlayers = {};
-    for (let id in players) {
-      snapshotPlayers[id] = {
-        ...players[id],
-        lastProcessedInput: players[id].lastProcessedInput || 0
-      };
-    }
-
-    io.emit("state", {
-      players: snapshotPlayers,
-      platforms: [...platforms],   // send full list
-      portals: [...portals],       // send current portals
-      jumpPads: [...jumpPads],     // send current jump pads
-      gameRunning,
-      itPlayer
-    });    
+    io.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
   }
 }, 1000 / TICK_RATE);
 
@@ -339,17 +322,16 @@ io.on("connection", socket => {
 
   const MOVE_ACCEL = 0.0005; // tweak for acceleration speed
 
-  socket.on("inputState", input => {
+  socket.on("move", dir => {
     const p = players[socket.id];
     if (!p) return;
 
-    if (input.left) p.vx -= MOVE_ACCEL;
-    if (input.right) p.vx += MOVE_ACCEL;
-    if (input.jump && p.onGround) {
+    if (dir === "left") p.vx -= MOVE_ACCEL;
+    if (dir === "right") p.vx += MOVE_ACCEL;
+    if (dir === "jump" && p.onGround) {
       p.vy = JUMP_FORCE;
       p.onGround = false;
     }
-    p.lastProcessedInput = input.seq;
   });
 
   socket.on("useAbility", () => {

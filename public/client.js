@@ -11,12 +11,6 @@ let itPlayer = null;
 let countdown = null;
 let timer = 0;
 
-const CLIENT_MOVE_ACCEL = 0.0005;
-const CLIENT_FRICTION = 0.85;
-
-let inputSeq = 0;
-let pendingInputs = [];
-
 const abilityUI = document.getElementById("ability-ui");
 const abilityName = document.getElementById("ability-name");
 const abilityTimer = document.getElementById("ability-timer");
@@ -126,50 +120,12 @@ let portals = [];
 
 let jumpPads = [];
 
-socket.on("state", data => {
-  for (let id in data.players) {
-    if (id === socket.id) {
-      const serverMe = data.players[id];
-      let me = players[id] || {};
-    
-      // ✅ Merge server authoritative fields
-      me.x = serverMe.x;
-      me.y = serverMe.y;
-      me.vx = serverMe.vx;
-      me.vy = serverMe.vy;
-      me.onGround = serverMe.onGround;
-    
-      // Keep local properties like name, class, radius, etc.
-      me.name = serverMe.name || me.name;
-      me.class = serverMe.class || me.class;
-      me.radius = serverMe.radius || me.radius;
-      me.isIt = serverMe.isIt;
-      me.invisible = serverMe.invisible;
-    
-      // Drop processed inputs
-      pendingInputs = pendingInputs.filter(inp => inp.seq > (serverMe.lastProcessedInput || 0));
-    
-      // Reapply unprocessed inputs
-      // Reapply unprocessed inputs (X only)
-      for (let inp of pendingInputs) {
-        if (inp.left) me.vx -= CLIENT_MOVE_ACCEL;
-        if (inp.right) me.vx += CLIENT_MOVE_ACCEL;
-        applyLocalPhysicsX(me); // X-only integration
-      }
 
-      // Y stays 100% server authoritative:
-      me.y = serverMe.y;
-      me.vy = serverMe.vy;
-      me.onGround = serverMe.onGround;
-    
-      players[id] = me;
-    } else {
-      players[id] = { ...players[id], ...data.players[id] }; // merge, don’t replace
-    }    
-  }
-  platforms = [...data.platforms];
-  portals   = [...(data.portals || [])];
-  jumpPads  = [...(data.jumpPads || [])];  
+socket.on('state', data => {
+  players = data.players;
+  platforms = data.platforms;
+  portals = data.portals || [];
+  jumpPads = data.jumpPads || [];
   itPlayer = data.itPlayer;
 });
 
@@ -225,16 +181,6 @@ function worldToScreen(wx, wy) {
   return { x: screenX, y: screenY };
 }
 
-function handleInput() {
-  const me = players[socket.id];
-  if (!me) return;
-
-  if (keys['ArrowLeft'] || keys['KeyA']) me.vx -= CLIENT_MOVE_ACCEL;
-  if (keys['ArrowRight'] || keys['KeyD']) me.vx += CLIENT_MOVE_ACCEL;
-
-  // Do NOT modify me.vy / me.y here.
-  // Jump is still sent to the server below; server applies it authoritatively.
-}
 
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -447,20 +393,11 @@ for (let id in players) {
     ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2);
   }
 
+  // Movement
   if (joined) {
-    const me = players[socket.id];
-    if (me) {
-      handleInput();
-    }
-
-    const input = {
-      left: keys['ArrowLeft'] || keys['KeyA'],
-      right: keys['ArrowRight'] || keys['KeyD'],
-      jump: keys['ArrowUp'] || keys['KeyW'],
-      seq: inputSeq++
-    };
-    socket.emit("inputState", input);
-    pendingInputs.push(input);    
+    if (keys['ArrowLeft'] || keys['KeyA']) socket.emit('move', 'left');
+    if (keys['ArrowRight'] || keys['KeyD']) socket.emit('move', 'right');
+    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) socket.emit('move', 'jump');
   }
 
   requestAnimationFrame(gameLoop);
