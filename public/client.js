@@ -243,12 +243,7 @@ function applyLocalPhysics(p) {
   p.x += p.vx;
   p.vx *= FRICTION;
 
-  // Ground collision
-  if (p.y + p.radius > 1 - 0.1) {
-    p.y = 1 - 0.1 - p.radius;
-    p.vy = 0;
-    p.onGround = true;
-  }
+
 }
 
 function gameLoop() {
@@ -466,7 +461,6 @@ for (let id in players) {
     const me = players[socket.id];
     if (me) {
       handleInput();
-      applyLocalPhysics(me);
     }
 
     const input = {
