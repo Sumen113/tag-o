@@ -129,17 +129,24 @@ socket.on("state", data => {
       const serverMe = data.players[id];
       let me = players[id] || {};
     
-      // Authoritative state from server
+      // ✅ Merge server authoritative fields
       me.x = serverMe.x;
       me.y = serverMe.y;
       me.vx = serverMe.vx;
       me.vy = serverMe.vy;
       me.onGround = serverMe.onGround;
     
-      // Remove inputs the server has already processed
+      // Keep local properties like name, class, radius, etc.
+      me.name = serverMe.name || me.name;
+      me.class = serverMe.class || me.class;
+      me.radius = serverMe.radius || me.radius;
+      me.isIt = serverMe.isIt;
+      me.invisible = serverMe.invisible;
+    
+      // Drop processed inputs
       pendingInputs = pendingInputs.filter(inp => inp.seq > (serverMe.lastProcessedInput || 0));
     
-      // Re-apply unprocessed inputs
+      // Reapply unprocessed inputs
       for (let inp of pendingInputs) {
         if (inp.left) me.vx -= 0.0005;
         if (inp.right) me.vx += 0.0005;
@@ -152,7 +159,7 @@ socket.on("state", data => {
     
       players[id] = me;
     } else {
-      players[id] = data.players[id];
+      players[id] = { ...players[id], ...data.players[id] }; // merge, don’t replace
     }    
   }
   platforms = data.platforms;
