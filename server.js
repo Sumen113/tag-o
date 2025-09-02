@@ -11,7 +11,7 @@ app.use(express.static("public"));
 const TICK_RATE = 60;
 const GAME_DURATION = 180;
 const JUMP_FORCE = -0.02;
-const GRAVITY = 0.001;
+const GRAVITY = 0.0005;
 const TAG_COOLDOWN = 500; // milliseconds
 
 let portals = [];
@@ -20,24 +20,28 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 
 let players = {};
 let platforms = [
-  // Wide ground floor
-  { x: -0.8, y: 0.89, w: 2.6, h: 0.3, type: "static" },
+  // Ground (long, bottom)
+  { x: 0, y: 0.89, w: 3.0, h: 0.03, type: "static" },
 
-  // Lower wide platforms
-  { x: 0.1, y: 0.75, w: 0.35, h: 0.03, type: "static" },
-  { x: 0.55, y: 0.75, w: 0.35, h: 0.03, type: "static" },
+  // Left side
+  { x: 0.2, y: 0.72, w: 0.3, h: 0.03, type: "static" },
+  { x: 0.5, y: 0.55, w: 0.25, h: 0.03, type: "static" },
 
-  // Middle platforms (wider, fewer)
-  { x: 0.3, y: 0.58, w: 0.35, h: 0.03, type: "static" },
-  { x: 0.7, y: 0.58, w: 0.35, h: 0.03, type: "moving", direction: "horizontal", range: 0.15, speed: 0.0015, originX: 0.7, originY: 0.58 },
+  // Middle section
+  { x: 1.0, y: 0.62, w: 0.4, h: 0.03, type: "static" },
+  { x: 1.5, y: 0.62, w: 0.4, h: 0.03, type: "static" },
 
-  // Upper platforms
-  { x: 0.2, y: 0.38, w: 0.35, h: 0.03, type: "static" },
-  { x: 0.65, y: 0.38, w: 0.35, h: 0.03, type: "static" },
+  // Right side
+  { x: 2.0, y: 0.75, w: 0.3, h: 0.03, type: "static" },
+  { x: 2.3, y: 0.55, w: 0.3, h: 0.03, type: "static" },
+
+  // Upper layers
+  { x: 0.8, y: 0.38, w: 0.4, h: 0.03, type: "static" },
+  { x: 1.8, y: 0.38, w: 0.4, h: 0.03, type: "static" },
 
   // High platforms
-  { x: 0.35, y: 0.22, w: 0.3, h: 0.03, type: "static" },
-  { x: 0.8, y: 0.18, w: 0.25, h: 0.03, type: "static" }
+  { x: 0.5, y: 0.18, w: 0.35, h: 0.03, type: "static" },
+  { x: 2.2, y: 0.18, w: 0.35, h: 0.03, type: "static" }
 ];
 
 
@@ -216,7 +220,8 @@ function applyPhysics() {
     p.vx *= FRICTION;
 
     // Keep player inside bounds
-    p.x = Math.max(p.radius - 0.13, Math.min(1.08 - p.radius, p.x));
+    const WORLD_WIDTH = 3.0;
+    p.x = Math.max(p.radius, Math.min(WORLD_WIDTH - p.radius, p.x));
     
 
     // Check portal collisions
