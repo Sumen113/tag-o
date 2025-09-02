@@ -141,37 +141,42 @@ socket.on('loser', loserName => {
 function updateCamera() {
   if (!players || Object.keys(players).length === 0) return;
 
-  let minX = 1, maxX = 0, minY = 1, maxY = 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (let id in players) {
-    let p = players[id];
+    const p = players[id];
     minX = Math.min(minX, p.x);
     maxX = Math.max(maxX, p.x);
     minY = Math.min(minY, p.y);
     maxY = Math.max(maxY, p.y);
   }
 
-  let targetX = (minX + maxX) / 2;
-  let targetY = (minY + maxY) / 2;
+  // Target position (center of all players)
+  const targetX = (minX + maxX) / 2;
+  const targetY = (minY + maxY) / 2;
 
-  let spreadX = maxX - minX;
-  let spreadY = maxY - minY;
+  // Calculate spread and zoom
+  const spreadX = maxX - minX;
+  const spreadY = maxY - minY;
   let targetZoom = 0.8 / Math.max(spreadX, spreadY, 0.2);
   targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom));
 
-  // Smooth movement first
-  camera.x += (targetX - camera.x) * 0.05;
+  // Smooth follow
+  camera.x += (targetX - camera.x) * 0.08; // slightly faster than before
+  camera.y += (targetY - camera.y) * 0.08;
   camera.zoom += (targetZoom - camera.zoom) * 0.05;
 
-  // Now clamp vertically
+  // Clamp inside world bounds
+  const WORLD_WIDTH = 2.0;  // adjust based on your map
+  const WORLD_HEIGHT = 1.0;
+  const halfWidth = 0.5 / camera.zoom;
   const halfHeight = 0.5 / camera.zoom;
-  const lowestY = 1;   // bottom of world
-  const highestY = 0;  // top of world
-  if (camera.y + halfHeight > lowestY) camera.y = lowestY - halfHeight;
-  if (camera.y - halfHeight < highestY) camera.y = highestY + halfHeight;
 
-  // Smooth the clamping for camera.y if needed
-  camera.y += (targetY - camera.y) * 0.05;
+  if (camera.x - halfWidth < 0) camera.x = halfWidth;
+  if (camera.x + halfWidth > WORLD_WIDTH) camera.x = WORLD_WIDTH - halfWidth;
+  if (camera.y - halfHeight < 0) camera.y = halfHeight;
+  if (camera.y + halfHeight > WORLD_HEIGHT) camera.y = WORLD_HEIGHT - halfHeight;
 }
+
 
 
 // Convert world coords (0-1) to screen coords based on camera
