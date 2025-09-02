@@ -20,28 +20,25 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 
 let players = {};
 let platforms = [
-  // Ground (long, bottom)
-  { x: 0, y: 0.89, w: 3.0, h: 0.03, type: "static" },
+  // Ground (bottom, wide)
+  { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
 
-  // Left side
+  // Lower layer
   { x: 0.2, y: 0.72, w: 0.3, h: 0.03, type: "static" },
-  { x: 0.5, y: 0.55, w: 0.25, h: 0.03, type: "static" },
+  { x: 0.8, y: 0.72, w: 0.3, h: 0.03, type: "static" },
+  { x: 1.4, y: 0.72, w: 0.3, h: 0.03, type: "static" },
 
-  // Middle section
-  { x: 1.0, y: 0.62, w: 0.4, h: 0.03, type: "static" },
-  { x: 1.5, y: 0.62, w: 0.4, h: 0.03, type: "static" },
+  // Mid layer
+  { x: 0.5, y: 0.55, w: 0.3, h: 0.03, type: "static" },
+  { x: 1.1, y: 0.55, w: 0.3, h: 0.03, type: "moving", direction: "horizontal", range: 0.15, speed: 0.0015, originX: 1.1, originY: 0.55 },
 
-  // Right side
-  { x: 2.0, y: 0.75, w: 0.3, h: 0.03, type: "static" },
-  { x: 2.3, y: 0.55, w: 0.3, h: 0.03, type: "static" },
-
-  // Upper layers
-  { x: 0.8, y: 0.38, w: 0.4, h: 0.03, type: "static" },
-  { x: 1.8, y: 0.38, w: 0.4, h: 0.03, type: "static" },
+  // Upper layer
+  { x: 0.4, y: 0.38, w: 0.3, h: 0.03, type: "static" },
+  { x: 1.2, y: 0.38, w: 0.3, h: 0.03, type: "static" },
 
   // High platforms
-  { x: 0.5, y: 0.18, w: 0.35, h: 0.03, type: "static" },
-  { x: 2.2, y: 0.18, w: 0.35, h: 0.03, type: "static" }
+  { x: 0.6, y: 0.2, w: 0.25, h: 0.03, type: "static" },
+  { x: 1.4, y: 0.18, w: 0.25, h: 0.03, type: "static" }
 ];
 
 
@@ -49,9 +46,6 @@ let jumpPads = [
   { x: -0.07, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }, // left side
   { x: 0.94, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }  // right side
 ];
-
-
-
 
 let groundHeight = 0.1;
 
@@ -220,7 +214,7 @@ function applyPhysics() {
     p.vx *= FRICTION;
 
     // Keep player inside bounds
-    const WORLD_WIDTH = 3.0;
+    const WORLD_WIDTH = 2.0;
     p.x = Math.max(p.radius, Math.min(WORLD_WIDTH - p.radius, p.x));
     
 
