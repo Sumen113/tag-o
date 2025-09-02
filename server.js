@@ -23,24 +23,29 @@ let platforms = [
   // Ground (bottom, wide)
   { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
 
-  // Lower layer
-  { x: 0.2, y: 0.72, w: 0.3, h: 0.03, type: "static" },
-  { x: 0.8, y: 0.72, w: 0.3, h: 0.03, type: "static" },
-  { x: 1.4, y: 0.72, w: 0.3, h: 0.03, type: "static" },
+  // Left staircase (going up)
+  { x: 0.1, y: 0.78, w: 0.2, h: 0.03, type: "static" },
+  { x: 0.2, y: 0.70, w: 0.2, h: 0.03, type: "static" },
+  { x: 0.3, y: 0.62, w: 0.2, h: 0.03, type: "static" },
+  { x: 0.4, y: 0.54, w: 0.2, h: 0.03, type: "static" },
 
-  // Mid layer
-  { x: 0.5, y: 0.55, w: 0.3, h: 0.03, type: "static" },
-  { x: 1.1, y: 0.55, w: 0.3, h: 0.03, type: "moving", direction: "horizontal", range: 0.15, speed: 0.0015, originX: 1.1, originY: 0.55 },
+  // Mid platforms
+  { x: 0.55, y: 0.46, w: 0.3, h: 0.03, type: "static" },
+  { x: 1.0, y: 0.46, w: 0.3, h: 0.03, type: "moving", direction: "horizontal", range: 0.15, speed: 0.0015, originX: 1.0, originY: 0.46 },
 
-  // Upper layer
-  { x: 0.4, y: 0.38, w: 0.3, h: 0.03, type: "static" },
-  { x: 1.2, y: 0.38, w: 0.3, h: 0.03, type: "static" },
+  // Right staircase (going up)
+  { x: 1.2, y: 0.54, w: 0.2, h: 0.03, type: "static" },
+  { x: 1.3, y: 0.62, w: 0.2, h: 0.03, type: "static" },
+  { x: 1.4, y: 0.70, w: 0.2, h: 0.03, type: "static" },
+  { x: 1.5, y: 0.78, w: 0.2, h: 0.03, type: "static" },
 
-  // High platforms
-  { x: 0.6, y: 0.2, w: 0.25, h: 0.03, type: "static" },
-  { x: 1.4, y: 0.18, w: 0.25, h: 0.03, type: "static" }
+  // Upper layer center
+  { x: 0.8, y: 0.36, w: 0.3, h: 0.03, type: "static" },
+
+  // High platforms (small steps up)
+  { x: 0.6, y: 0.24, w: 0.25, h: 0.03, type: "static" },
+  { x: 1.1, y: 0.20, w: 0.25, h: 0.03, type: "static" }
 ];
-
 
 let jumpPads = [
   { x: -0.07, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }, // left side
