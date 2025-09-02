@@ -20,40 +20,26 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 
 let players = {};
 let platforms = [
-  // Ground floor
-  { x: -0.5, y: 0.89, w: 2, h: 0.3, type: "static" },
+  // Wide ground floor
+  { x: -0.8, y: 0.89, w: 2.6, h: 0.3, type: "static" },
 
-  // Lower platforms
-  { x: 0.05, y: 0.8, w: 0.18, h: 0.03, type: "static" },
-  { x: 0.35, y: 0.78, w: 0.16, h: 0.03, type: "moving", direction: "horizontal", range: 0.1, speed: 0.002, originX: 0.35, originY: 0.78 },
-  { x: 0.65, y: 0.8, w: 0.18, h: 0.03, type: "static" },
+  // Lower wide platforms
+  { x: 0.1, y: 0.75, w: 0.35, h: 0.03, type: "static" },
+  { x: 0.55, y: 0.75, w: 0.35, h: 0.03, type: "static" },
 
-  // Stairs (left side up)
-  { x: 0.08, y: 0.7, w: 0.08, h: 0.03, type: "static" },
-  { x: 0.14, y: 0.64, w: 0.08, h: 0.03, type: "static" },
-  { x: 0.2, y: 0.58, w: 0.08, h: 0.03, type: "static" },
-
-  // Middle platforms
-  { x: 0.4, y: 0.65, w: 0.18, h: 0.03, type: "static" },
-
-  // Stairs (right side down)
-  { x: 0.7, y: 0.6, w: 0.08, h: 0.03, type: "static" },
-  { x: 0.76, y: 0.66, w: 0.08, h: 0.03, type: "static" },
-  { x: 0.82, y: 0.72, w: 0.08, h: 0.03, type: "static" },
+  // Middle platforms (wider, fewer)
+  { x: 0.3, y: 0.58, w: 0.35, h: 0.03, type: "static" },
+  { x: 0.7, y: 0.58, w: 0.35, h: 0.03, type: "moving", direction: "horizontal", range: 0.15, speed: 0.0015, originX: 0.7, originY: 0.58 },
 
   // Upper platforms
-  { x: 0.3, y: 0.48, w: 0.14, h: 0.03, type: "static" },
-  { x: 0.58, y: 0.44, w: 0.14, h: 0.03, type: "moving", direction: "horizontal", range: 0.08, speed: 0.002, originX: 0.58, originY: 0.44 },
+  { x: 0.2, y: 0.38, w: 0.35, h: 0.03, type: "static" },
+  { x: 0.65, y: 0.38, w: 0.35, h: 0.03, type: "static" },
 
   // High platforms
-  { x: 0.18, y: 0.3, w: 0.14, h: 0.03, type: "static" },
-  { x: 0.45, y: 0.28, w: 0.14, h: 0.03, type: "static" },
-  { x: 0.75, y: 0.26, w: 0.14, h: 0.03, type: "static" },
-
-  // Small challenge steps (top)
-  { x: 0.32, y: 0.18, w: 0.06, h: 0.03, type: "static" },
-  { x: 0.55, y: 0.14, w: 0.06, h: 0.03, type: "static" }
+  { x: 0.35, y: 0.22, w: 0.3, h: 0.03, type: "static" },
+  { x: 0.8, y: 0.18, w: 0.25, h: 0.03, type: "static" }
 ];
+
 
 let jumpPads = [
   { x: -0.07, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }, // left side
