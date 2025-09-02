@@ -25,7 +25,7 @@ classImages.ninja.src = "./images/ninja.png"; // make sure this file exists
 // Camera
 let camera = { x: 0.5, y: 0.5, zoom: 3 };
 const MIN_ZOOM = 0.6;
-const MAX_ZOOM = 1.5;
+const MAX_ZOOM = 2;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
