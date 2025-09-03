@@ -94,7 +94,7 @@ body.joined::before {
   width: 70px; 
   height: 70px; 
   padding: 0;             /* remove default button padding */
-  border-radius: 10%; 
+  border-radius: 20%; 
   border: 2px solid rgba(255,255,255,0.7); 
   background: none;       /* no extra background behind image */
   display: inline-block; 
@@ -220,4 +220,28 @@ body.joined #ability-ui:hover:not(.disabled) {
   opacity: 0.9;
 }
 
+.class-option[data-class="monkey"] img {
+  transform: scale(1.38);   /* make monkey image larger */
+  position: relative;
+  z-index: 2;              /* bring it above the button */
+}
 
+.class-option[data-class="monkey"] {
+  overflow: visible;       /* allow the image to stick out */
+}
+
+.class-option[data-class="clown"] {
+  overflow: visible;        /* allow sticking out */
+  display: flex;            /* use flexbox to center */
+  justify-content: center;  /* center horizontally */
+  align-items: flex-start;  /* align to the top of button */
+}
+
+.class-option[data-class="clown"] img {
+  width: 175%;          /* smaller than the button */
+  height: auto;
+  position: relative;
+  top: -45px;
+  left: 0.3px;
+  z-index: 2;
+}

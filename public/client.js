@@ -66,7 +66,8 @@ joinBtn.addEventListener('click', () => {
   // Remove disabled immediately
   abilityUI.classList.remove("disabled"); 
   abilityUI.style.background = "rgba(0,123,255,0.8)";
-  abilityName.innerText = "Invisibility";
+  if (playerClass === "ninja") abilityName.innerText = "Invisibility";
+  if (playerClass === "monkey") abilityName.innerText = "Grapple";  
   abilityTimer.innerText = "Ready";
 
   // fade out join screen
@@ -96,8 +97,12 @@ function tryActivateAbility() {
   if (abilityCooldown > 0) return; 
   socket.emit('useAbility');
   abilityCooldown = 60; // seconds
-  startAbilityCooldownUI("Invisibility");
-
+  if (playerClass === "ninja") {
+    startAbilityCooldownUI("Invisibility");
+  }
+  if (playerClass === "monkey") {
+    startAbilityCooldownUI("Grapple");
+  }  
 } 
 
 function startAbilityCooldownUI(name) {
@@ -291,9 +296,8 @@ for (let id in players) {
   const pos = worldToScreen(p.x, p.y);
   let radius = p.radius * camera.zoom * canvas.height;
 
-  // If monkey, make size 1.2x bigger
   if (p.class === "monkey") {
-    radius *= 1.3;
+    radius *= 1.37;
   }
 
   
@@ -302,7 +306,7 @@ for (let id in players) {
   } else {
     ctx.fillStyle = "yellow";
   }
-
+n 
   const img = classImages[p.class];
   if (img && img.complete) {
     const size = radius * 2;

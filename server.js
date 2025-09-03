@@ -225,6 +225,30 @@ function applyPhysics() {
     p.x += p.vx;
     p.vx *= FRICTION;
 
+    // Monkey grapple glide
+    if (p.class === "monkey" && p.grappling && p.grappleTarget) {
+      const dx = p.grappleTarget.x - p.x;
+      const dy = p.grappleTarget.y - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < 0.02) {
+        // Arrived
+        p.x = p.grappleTarget.x;
+        p.y = p.grappleTarget.y;
+        p.vx = 0;
+        p.vy = 0;
+        p.grappling = false;
+        p.grappleTarget = null;
+      } else {
+        // Glide movement (smooth)
+        const speed = 0.03; // glide speed
+        p.x += (dx / dist) * speed;
+        p.y += (dy / dist) * speed;
+        p.vx = 0;
+        p.vy = 0;
+      }
+    }
+
     // Keep player inside bounds
     const WORLD_WIDTH = 2.0;
     p.x = Math.max(p.radius, Math.min(WORLD_WIDTH - p.radius, p.x));
@@ -335,10 +359,23 @@ io.on("connection", socket => {
     const p = players[socket.id];
     if (!p) return;
   
-    // Check class
     if (p.class === "ninja") {
       p.invisibleUntil = Date.now() + 5000; // 5 seconds invisibility
     }
+    
+    if (p.class === "monkey") {
+      // Pick a random platform
+      const platform = platforms[Math.floor(Math.random() * platforms.length)];
+      if (!platform) return;
+    
+      // Pick a random spot on top of it
+      const targetX = platform.x + Math.random() * platform.w;
+      const targetY = platform.y - p.radius - 0.01; // just above
+    
+      // Store glide target
+      p.grappleTarget = { x: targetX, y: targetY };
+      p.grappling = true;
+    }    
   });  
 
   socket.on("disconnect", () => {
