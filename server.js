@@ -317,7 +317,7 @@ io.on("connection", socket => {
     if (Object.keys(players).length >= 2 && !gameRunning) startGame();
   });
 
-  const MOVE_ACCEL = 0.0005; // tweak for acceleration speed
+  const MOVE_ACCEL = 0.0007; // tweak for acceleration speed
 
   socket.on("move", dir => {
     const p = players[socket.id];
