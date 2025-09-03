@@ -18,7 +18,7 @@ let abilityCooldown = 0;
 
 // Player class images
 const classImages = {
-  ninja: new Image()
+  ninja: new Image(),
   monkey: new Image()
 };
 classImages.ninja.src = "./images/ninja.png"; // make sure this file exists
