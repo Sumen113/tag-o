@@ -289,7 +289,13 @@ for (let id in players) {
   const p = players[id];
   if (id !== socket.id && p.invisible) continue; // skip drawing invisible players (but not yourself)  
   const pos = worldToScreen(p.x, p.y);
-  const radius = p.radius * camera.zoom * canvas.height;
+  let radius = p.radius * camera.zoom * canvas.height;
+
+  // If monkey, make size 1.2x bigger
+  if (p.class === "monkey") {
+    radius *= 1.3;
+  }
+
   
   if (id === socket.id && p.invisible) {
     ctx.fillStyle = "rgba(255, 255, 0, 0.3)"; // transparent yellow for yourself
