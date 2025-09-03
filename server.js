@@ -21,7 +21,7 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 let players = {};
 let platforms = [
   // Ground (bottom floor)
-  { x: 0, y: 0.95, w: 2.0, h: 0.03, type: "static" },
+  { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
 
   // Bottom left
   { x: 0.05, y: 0.82, w: 0.25, h: 0.03, type: "static" },
@@ -57,7 +57,7 @@ let platforms = [
 
 let jumpPads = [
   { x: -0.07, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }, // left side
-  { x: 0.94, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }  // right side
+  { x: 1.94, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }  // right side
 ];
 
 let groundHeight = 0.1;
