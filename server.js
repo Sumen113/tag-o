@@ -32,7 +32,6 @@ let platforms = [
   { x: 1.00, y: 0.70, w: 0.25, h: 0.03, type: "static" },
 
   // Bottom slope (left side)
-  { x: 0.35, y: 0.88, w: 0.45, h: 0.03, type: "static", angle: -0.35 },
 
   // Mid platforms
   { x: 0.10, y: 0.56, w: 0.25, h: 0.03, type: "static" },
