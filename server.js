@@ -356,27 +356,28 @@ io.on("connection", socket => {
   });
 
   socket.on("useAbility", () => {
-    const p = players[socket.id];
-    if (!p) return;
-  
-    if (p.class === "ninja") {
-      p.invisibleUntil = Date.now() + 5000; // 5 seconds invisibility
-    }
-    
-    if (p.class === "monkey") {
-      // Pick a random platform
-      const platform = platforms[Math.floor(Math.random() * platforms.length)];
-      if (!platform) return;
-    
-      // Pick a random spot on top of it
-      const targetX = platform.x + Math.random() * platform.w;
-      const targetY = platform.y - p.radius - 0.01; // just above
-    
-      // Store glide target
-      p.grappleTarget = { x: targetX, y: targetY };
-      p.grappling = true;
-    }    
-  });  
+  const p = players[socket.id];
+  if (!p) return;
+
+  if (p.class === "ninja") {
+    p.invisibleUntil = Date.now() + 5000; // 5s invisibility
+  }
+
+  if (p.class === "monkey") {
+    const platform = platforms[Math.floor(Math.random() * platforms.length)];
+    if (!platform) return;
+
+    const targetX = platform.x + Math.random() * platform.w;
+    const targetY = platform.y - p.radius - 0.01;
+    p.grappleTarget = { x: targetX, y: targetY };
+    p.grappling = true;
+  }
+
+  if (p.class === "clown") {
+    // Tell ALL other players to show confetti for 5s
+    socket.broadcast.emit("confetti", { duration: 5000 });
+  }
+});  
 
   socket.on("disconnect", () => {
     delete players[socket.id];
