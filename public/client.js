@@ -306,7 +306,6 @@ for (let id in players) {
   } else {
     ctx.fillStyle = "yellow";
   }
-n 
   const img = classImages[p.class];
   if (img && img.complete) {
     const size = radius * 2;
