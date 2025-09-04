@@ -304,7 +304,7 @@ for (let id in players) {
   }
   
   if (p.class === "clown") {
-    radius *= 1.45
+    radius *= 1.50
   }
 
   
@@ -327,7 +327,13 @@ for (let id in players) {
       ctx.globalAlpha = 0.3; // 👈 semi-transparent only for yourself
     }
     
-    ctx.drawImage(img, pos.x - radius, pos.y - radius, size, size);
+    let yOffset = 0;
+    if (p.class === "clown") {
+      yOffset = -radius * 0.15; // move clown image up by ~15% of its size
+    }
+    
+    ctx.drawImage(img, pos.x - radius, pos.y - radius + yOffset, size, size);
+
     
     ctx.restore();
     ctx.globalAlpha = 1.0; // reset alpha after drawing    
