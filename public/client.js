@@ -11,6 +11,9 @@ let itPlayer = null;
 let countdown = null;
 let timer = 0;
 
+let confettiParticles = [];
+let confettiEndTime = 0;
+
 const abilityUI = document.getElementById("ability-ui");
 const abilityName = document.getElementById("ability-name");
 const abilityTimer = document.getElementById("ability-timer");
@@ -106,7 +109,25 @@ function tryActivateAbility() {
   if (playerClass === "monkey") {
     startAbilityCooldownUI("Grapple");
   }  
-} 
+}
+
+function startConfetti(duration) {
+  confettiParticles = [];
+  confettiEndTime = Date.now() + duration;
+
+  for (let i = 0; i < 200; i++) {
+    confettiParticles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * -canvas.height,
+      size: 5 + Math.random() * 5,
+      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      speedY: 2 + Math.random() * 3,
+      speedX: (Math.random() - 0.5) * 2,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.2,
+    });
+  }
+}
 
 function startAbilityCooldownUI(name) {
   abilityUI.classList.add("disabled");
@@ -137,6 +158,10 @@ socket.on('state', data => {
   portals = data.portals || [];
   jumpPads = data.jumpPads || [];
   itPlayer = data.itPlayer;
+});
+
+socket.on("confetti", ({ duration }) => {
+  startConfetti(duration);
 });
 
 socket.on('countdown', cd => countdown = cd);
@@ -329,7 +354,7 @@ for (let id in players) {
     
     let yOffset = 0;
     if (p.class === "clown") {
-      yOffset = -radius * 0.15; // move clown image up by ~15% of its size
+      yOffset = -radius * 0.30; // move clown image up by ~15% of its size
     }
     
     ctx.drawImage(img, pos.x - radius, pos.y - radius + yOffset, size, size);
@@ -421,6 +446,27 @@ for (let id in players) {
     ctx.strokeText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2);
     ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2);
   }
+
+  // Confetti overlay
+if (Date.now() < confettiEndTime) {
+  confettiParticles.forEach(p => {
+    p.x += p.speedX;
+    p.y += p.speedY;
+    p.rotation += p.rotationSpeed;
+
+    if (p.y > canvas.height) {
+      p.y = -10;
+      p.x = Math.random() * canvas.width;
+    }
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+    ctx.restore();
+  });
+}
 
   // Movement
   if (joined) {
