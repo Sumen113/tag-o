@@ -19,10 +19,12 @@ let abilityCooldown = 0;
 // Player class images
 const classImages = {
   ninja: new Image(),
-  monkey: new Image()
+  monkey: new Image(),
+  clown: new image()
 };
 classImages.ninja.src = "./images/ninja.png"; // make sure this file exists
 classImages.monkey.src = "./images/monkey.png"; // make sure this file exists
+classImages.clown.src = "./images/clown.png"; // make sure this file exists
 
 // Camera
 let camera = { x: 0.5, y: 0.5, zoom: 3 };
@@ -68,6 +70,7 @@ joinBtn.addEventListener('click', () => {
   abilityUI.style.background = "rgba(0,123,255,0.8)";
   if (playerClass === "ninja") abilityName.innerText = "Invisibility";
   if (playerClass === "monkey") abilityName.innerText = "Grapple";  
+  if (playerClass === "clown") abilityName.innerText = "Confetti";  
   abilityTimer.innerText = "Ready";
 
   // fade out join screen
@@ -298,6 +301,10 @@ for (let id in players) {
 
   if (p.class === "monkey") {
     radius *= 1.37;
+  }
+  
+  if (p.class === "clown") {
+    radius *= 1.45
   }
 
   
