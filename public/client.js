@@ -115,11 +115,11 @@ function startConfetti(duration) {
   confettiParticles = [];
   confettiEndTime = Date.now() + duration;
 
-  for (let i = 0; i < 700; i++) {
+  for (let i = 0; i < 1400; i++) {
     confettiParticles.push({
       x: Math.random() * canvas.width,
       y: Math.random() * -canvas.height,
-      size: 5 + Math.random() * 10,
+      size: 5 + Math.random() * 20,
       color: `hsl(${Math.random() * 360}, 100%, 50%)`,
       speedY: 2 + Math.random() * 3,
       speedX: (Math.random() - 0.5) * 2,
