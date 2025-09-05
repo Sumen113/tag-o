@@ -102,7 +102,13 @@ function startTimer() {
 }
 
 function resetGame() {
-  if (Object.keys(players).length >= 2) startGame();
+  if (Object.keys(players).length >= 2) {
+    startGame();
+  } else {
+    gameRunning = false;
+    itPlayer = null;
+    portals = [];
+  }
 }
 
 function spawnPortals() {
@@ -168,6 +174,7 @@ function applyPhysics() {
   for (let id in players) {
 
     let p = players[id];
+    if (!p) continue;
     p.vy += GRAVITY;
     p.y += p.vy;
     p.onGround = false;
@@ -380,9 +387,14 @@ io.on("connection", socket => {
 });  
 
   socket.on("disconnect", () => {
-    delete players[socket.id];
-    if (Object.keys(players).length < 2) gameRunning = false;
-  });
+  if (itPlayer === socket.id) {
+    itPlayer = null; 
+    pickRandomIt(); // pick a new one if possible
+  }
+
+  delete players[socket.id];
+  if (Object.keys(players).length < 2) gameRunning = false;
+});
 });
 
 const PORT = process.env.PORT || 3000;
