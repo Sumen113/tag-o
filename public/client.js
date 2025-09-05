@@ -119,7 +119,7 @@ function startConfetti(duration) {
     confettiParticles.push({
       x: Math.random() * canvas.width,
       y: Math.random() * -canvas.height,
-      size: 5 + Math.random() * 5,
+      size: 5 + Math.random() * 10,
       color: `hsl(${Math.random() * 360}, 100%, 50%)`,
       speedY: 2 + Math.random() * 3,
       speedX: (Math.random() - 0.5) * 2,
