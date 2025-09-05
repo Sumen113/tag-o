@@ -108,6 +108,10 @@ function tryActivateAbility() {
   }
   if (playerClass === "monkey") {
     startAbilityCooldownUI("Grapple");
+  }
+  if (playerClass === "clown") {
+    abilityCooldown = 40; // seconds
+    startAbilityCooldownUI("Confetti");
   }  
 }
 
