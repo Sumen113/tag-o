@@ -19,40 +19,61 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 
 
 let players = {};
-let platforms = [
-  // Ground (bottom floor)
-  { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
 
-  // Bottom left
-  { x: 0.05, y: 0.82, w: 0.25, h: 0.03, type: "static" },
-  { x: 0.25, y: 0.70, w: 0.25, h: 0.03, type: "static" },
+// Predefined maps
+const MAPS = [
+  // Map 1
+  [
+    { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
 
-  // Bottom mid-right
-  { x: 1.25, y: 0.82, w: 0.35, h: 0.03, type: "static" },
-  { x: 1.00, y: 0.70, w: 0.25, h: 0.03, type: "static" },
-
-  // Bottom slope (left side)
-
-  // Mid platforms
-  { x: 0.10, y: 0.56, w: 0.25, h: 0.03, type: "static" },
-  { x: 0.55, y: 0.56, w: 0.55, h: 0.03, type: "static" },
-  { x: 1.40, y: 0.56, w: 0.25, h: 0.03, type: "static" },
-
-  // Upper mids
-  { x: 0.20, y: 0.40, w: 0.25, h: 0.03, type: "static" },
-  { x: 0.65, y: 0.40, w: 0.55, h: 0.03, type: "static" },
-
-  // Top right slant
-  { x: 1.50, y: 0.36, w: 0.25, h: 0.03, type: "static", angle: 0.25 },
-
-  // Higher single platforms
-  { x: 0.40, y: 0.28, w: 0.25, h: 0.03, type: "static" },
-  { x: 1.15, y: 0.28, w: 0.25, h: 0.03, type: "static" },
-
-  // Very top center
-  { x: 0.80, y: 0.18, w: 0.35, h: 0.03, type: "static" }
+    // Bottom left
+    { x: 0.05, y: 0.82, w: 0.25, h: 0.03, type: "static" },
+    { x: 0.25, y: 0.70, w: 0.25, h: 0.03, type: "static" },
+  
+    // Bottom mid-right
+    { x: 1.25, y: 0.82, w: 0.35, h: 0.03, type: "static" },
+    { x: 1.00, y: 0.70, w: 0.25, h: 0.03, type: "static" },
+  
+    // Bottom slope (left side)
+  
+    // Mid platforms
+    { x: 0.10, y: 0.56, w: 0.25, h: 0.03, type: "static" },
+    { x: 0.55, y: 0.56, w: 0.55, h: 0.03, type: "static" },
+    { x: 1.40, y: 0.56, w: 0.25, h: 0.03, type: "static" },
+  
+    // Upper mids
+    { x: 0.20, y: 0.40, w: 0.25, h: 0.03, type: "static" },
+    { x: 0.65, y: 0.40, w: 0.55, h: 0.03, type: "static" },
+  
+    // Top right slant
+    { x: 1.50, y: 0.36, w: 0.25, h: 0.03, type: "static", angle: 0.25 },
+  
+    // Higher single platforms
+    { x: 0.40, y: 0.28, w: 0.25, h: 0.03, type: "static" },
+    { x: 1.15, y: 0.28, w: 0.25, h: 0.03, type: "static" },
+  
+    // Very top center
+    { x: 0.80, y: 0.18, w: 0.35, h: 0.03, type: "static" }
+  ],
+  // Map 2
+  [
+    { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
+    { x: 0.10, y: 0.65, w: 0.35, h: 0.03, type: "static" },
+    { x: 1.20, y: 0.65, w: 0.35, h: 0.03, type: "static" },
+    { x: 0.60, y: 0.40, w: 0.80, h: 0.03, type: "static" }
+  ],
+  // Map 3
+  [
+    { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
+    { x: 0.50, y: 0.70, w: 0.40, h: 0.03, type: "static" },
+    { x: 0.20, y: 0.50, w: 0.30, h: 0.03, type: "static" },
+    { x: 1.30, y: 0.50, w: 0.30, h: 0.03, type: "static" },
+    { x: 0.80, y: 0.30, w: 0.40, h: 0.03, type: "static" }
+  ]
 ];
 
+// Default
+let platforms = MAPS[0];
 
 let jumpPads = [
   { x: -0.07, y: 0.87, w: 0.08, h: 0.02, power: -0.04 }, // left side
@@ -65,6 +86,32 @@ let gameRunning = false;
 let countdown = 3;
 let timer = GAME_DURATION;
 let itPlayer = null;
+
+let votes = {};
+let voting = false;
+
+function startVoting() {
+  votes = {};
+  voting = true;
+  io.emit("mapVoteStart", { maps: MAPS.length });
+
+  setTimeout(finishVoting, 8000); // 8 seconds to vote
+}
+
+function finishVoting() {
+  voting = false;
+  let tally = new Array(MAPS.length).fill(0);
+  Object.values(votes).forEach(v => tally[v]++);
+
+  let max = Math.max(...tally);
+  let winners = tally.map((v, i) => v === max ? i : -1).filter(i => i >= 0);
+
+  let chosen = winners[Math.floor(Math.random() * winners.length)];
+  platforms = MAPS[chosen];
+  io.emit("mapChosen", chosen);
+
+  startGame();
+}
 
 function startGame() {
   gameRunning = false;
@@ -345,7 +392,23 @@ io.on("connection", socket => {
       lastTagged: 0
     };    
 
-    if (Object.keys(players).length >= 2 && !gameRunning) startGame();
+    socket.on("voteMap", index => {
+      if (voting && index >= 0 && index < MAPS.length) {
+        votes[socket.id] = index;
+
+        // send updated tally to everyone
+        let tally = new Array(MAPS.length).fill(0);
+        Object.values(votes).forEach(v => tally[v]++);
+        io.emit("mapVoteUpdate", tally);        
+      }
+    });  
+
+    if (Object.keys(players).length === 1) {
+      socket.emit("waitingForPlayers");
+    }    
+    if (Object.keys(players).length >= 2 && !gameRunning && !voting) {
+      startVoting();
+    }    
   });
 
   const MOVE_ACCEL = 0.0007; // tweak for acceleration speed

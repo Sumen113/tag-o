@@ -245,3 +245,44 @@ body.joined #ability-ui:hover:not(.disabled) {
   left: 0.3px;
   z-index: 2;
 }
+
+.vote-btn {
+  padding: 12px 25px;
+  font-size: 18px;
+  cursor: pointer;
+  border: none;
+  border-radius: 15px;
+  background: rgba(0,123,255,0.8);
+  color: white;
+  font-family: 'Quicksand', sans-serif;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.vote-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: rgba(0,123,255,1);
+  box-shadow: 0 8px 25px rgba(0,123,255,0.5);
+}
+
+.vote-btn:disabled {
+  background: rgba(85,85,85,0.7);
+  cursor: not-allowed;
+}
+
+.vote-btn.selected {
+  background: rgba(0,200,0,0.9);
+  box-shadow: 0 0 20px rgba(0,200,0,0.7);
+  transform: scale(1.05);
+}
+
+#overlay-message {
+  position: fixed;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+#overlay-message.show {
+  opacity: 1;
+}

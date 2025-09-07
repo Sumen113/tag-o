@@ -11,26 +11,13 @@ let itPlayer = null;
 let countdown = null;
 let timer = 0;
 
+let voteActive = false;
+let voteOptions = 0;
+let voted = false;
+let waitingMessage = false;
+
 let confettiParticles = [];
 let confettiEndTime = 0;
-
-// --- PREDICTION / LOCAL SIMULATION (ADD HERE) ---
-const MOVE_ACCEL = 0.0007;    // same as server
-const JUMP_FORCE = -0.02;     // same as server
-const GRAVITY = 0.0005;       // same as server
-const FRICTION = 0.85;        // same as server
-
-let predicted = null;         // local predicted copy of our player
-let correction = { dx: 0, dy: 0, frames: 0 }; // for smooth reconciliation
-const SMOOTH_FRAMES = 6;      // how many frames to spread corrections across
-const MAX_SNAP_DISTANCE = 0.15; // if local/authoritative differ more than this, snap
-
-// Helper: deep clone a player (simple JSON clone is fine for our player object)
-function clonePlayer(p) {
-  if (!p) return null;
-  return JSON.parse(JSON.stringify(p));
-}
-
 
 const abilityUI = document.getElementById("ability-ui");
 const abilityName = document.getElementById("ability-name");
@@ -95,9 +82,8 @@ joinBtn.addEventListener('click', () => {
   abilityTimer.innerText = "Ready";
 
   // fade out join screen
-  joinScreen.classList.add('fade-out');
 
-  setTimeout(() => document.body.classList.add('joined'), 300);
+  joinScreen.classList.add('fade-out');
   setTimeout(() => joinScreen.style.display = 'none', 1000);
 
   joined = true;
@@ -113,6 +99,16 @@ window.addEventListener('keyup', e => keys[e.code] = false);
 abilityUI.addEventListener("click", tryActivateAbility);
 window.addEventListener("keydown", e => {
   if (e.code === "KeyE") tryActivateAbility();
+});
+
+window.addEventListener("keydown", e => {
+  if (voteActive && !voted) {
+    const num = parseInt(e.key);
+    if (!isNaN(num) && num >= 1 && num <= voteOptions) {
+      socket.emit("voteMap", num - 1);
+      voted = true;
+    }
+  }
 });
 
 
@@ -175,64 +171,90 @@ let jumpPads = [];
 
 
 socket.on('state', data => {
-  // Keep authoritative state for everyone (used to draw other players)
-  // but we will handle our local player prediction separately.
-  const serverPlayers = data.players;
+  players = data.players;
   platforms = data.platforms;
   portals = data.portals || [];
   jumpPads = data.jumpPads || [];
   itPlayer = data.itPlayer;
-
-  // If this client has no predicted copy yet, create one from the server state.
-  if (!predicted && serverPlayers[socket.id]) {
-    predicted = clonePlayer(serverPlayers[socket.id]);
-  }
-
-  // If we have a server version of our player and we also have a predicted copy,
-  // compute a reconciliation correction to smoothly nudge our predicted player
-  // towards the authoritative position. We don't hard-snap unless the error is large.
-  if (predicted && serverPlayers[socket.id]) {
-    const serverP = serverPlayers[socket.id];
-
-    // compute difference
-    const dx = serverP.x - predicted.x;
-    const dy = serverP.y - predicted.y;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist > MAX_SNAP_DISTANCE) {
-      // Big divergence — snap to server to avoid getting "lost"
-      predicted = clonePlayer(serverP);
-      correction.frames = 0;
-      correction.dx = 0;
-      correction.dy = 0;
-    } else {
-      // Smoothly correct over SMOOTH_FRAMES frames to avoid rubberbanding
-      if (dist > 0.0005) {
-        correction.frames = SMOOTH_FRAMES;
-        correction.dx = dx / correction.frames;
-        correction.dy = dy / correction.frames;
-      } else {
-        correction.frames = 0;
-        correction.dx = 0;
-        correction.dy = 0;
-      }
-
-      // Keep other server-side authoritative fields (invisibility, isIt, etc.)
-      // so UI/appearance stays authoritative:
-      predicted.vx = serverP.vx;
-      predicted.vy = serverP.vy;
-      predicted.onGround = serverP.onGround;
-      predicted.invisible = serverP.invisible;
-      predicted.isIt = serverP.isIt;
-      // Keep predicted.x,y as-is to be corrected over next frames by 'correction'
-    }
-  }
-
-  // Finally set the global players object to the serverPlayers so we can draw
-  // other players from authoritative state.
-  players = serverPlayers;
 });
 
+socket.on("waitingForPlayers", () => {
+  overlay.style.color = "white";  // 👈 force white
+  overlay.textContent = "Waiting for more players...";
+  overlay.classList.add("show");
+});
+
+socket.on("mapChosen", chosen => {
+  // Remove vote UI if it exists
+  if (voteUI) {
+    voteUI.remove();
+    voteUI = null;
+  }
+
+  // Show overlay text
+  overlay.style.color = "white";
+  overlay.style.top = "-25%"; // 👈 quarter down the screen
+  overlay.style.fontSize = "60px"; // optional: make it big
+  overlay.style.textAlign = "center";
+  overlay.textContent = `Map ${chosen + 1} chosen!`;
+  overlay.classList.add("show"); // show overlay
+
+  // Fade in / fade out
+  setTimeout(() => document.body.classList.add('joined'), 300);
+  setTimeout(() => overlay.classList.remove("show"), 3000);
+});
+
+let voteUI = null;
+
+socket.on("mapVoteStart", ({ maps }) => {
+  overlay.classList.remove("show"); // hide waiting msg
+
+  voteUI = document.createElement("div");
+  voteUI.id = "vote-ui";
+  voteUI.style.position = "fixed";
+  voteUI.style.top = "0";
+  voteUI.style.left = "0";
+  voteUI.style.width = "100%";
+  voteUI.style.height = "100%";
+  voteUI.style.display = "flex";
+  voteUI.style.flexDirection = "column";
+  voteUI.style.justifyContent = "center";
+  voteUI.style.alignItems = "center";
+  voteUI.style.background = "rgba(0,0,0,0.4)";
+  voteUI.style.zIndex = "200";
+
+  const title = document.createElement("h1");
+  title.innerText = "vote for the map";
+  title.style.marginBottom = "30px";
+  title.style.color = "white";   // 👈 force white
+  voteUI.appendChild(title);  
+
+  for (let i = 0; i < maps; i++) {
+    const btn = document.createElement("button");
+    btn.innerText = `Map ${i + 1} (0 votes)`;
+    btn.style.margin = "10px";
+    btn.className = "vote-btn";
+    btn.onclick = () => {
+      if (!voted) {
+        socket.emit("voteMap", i);
+        voted = true;
+        // Highlight your choice
+        btn.classList.add("selected");
+      }
+    };
+    voteUI.appendChild(btn);
+  }
+
+  document.body.appendChild(voteUI);
+});
+
+socket.on("mapVoteUpdate", tally => {
+  if (!voteUI) return;
+  const buttons = voteUI.querySelectorAll(".vote-btn");
+  tally.forEach((count, i) => {
+    buttons[i].innerText = `Map ${i + 1} (${count} votes)`;
+  });
+});
 
 socket.on("confetti", ({ duration }) => {
   startConfetti(duration);
@@ -295,105 +317,11 @@ function worldToScreen(wx, wy) {
   return { x: screenX, y: screenY };
 }
 
-// --- LOCAL SIMULATION: simulate our predicted player one small step ---
-function simulateLocalPlayerStep() {
-  if (!predicted) return;
-
-  // gravity and vertical movement
-  predicted.vy += GRAVITY;
-  predicted.y += predicted.vy;
-  predicted.onGround = false;
-
-  // ground collision (uses same groundHeight as server)
-  const groundHeight = 0.1;
-  if (predicted.y + predicted.radius > 1 - groundHeight) {
-    predicted.y = 1 - groundHeight - predicted.radius;
-    predicted.vy = 0;
-    predicted.onGround = true;
-  }
-
-  // platform collisions (mirrors server logic)
-  platforms.forEach(pl => {
-    if (predicted.x + predicted.radius > pl.x && predicted.x - predicted.radius < pl.x + pl.w) {
-      // landing from above
-      if (predicted.y + predicted.radius > pl.y && predicted.y + predicted.radius < pl.y + pl.h + 0.01 && predicted.vy >= 0) {
-        predicted.y = pl.y - predicted.radius;
-        predicted.vy = 0;
-        predicted.onGround = true;
-        if (pl.type === "moving" && pl.direction === "horizontal") {
-          predicted.x += pl.speed;
-        }
-      } else if (predicted.y - predicted.radius < pl.y + pl.h && predicted.y - predicted.radius > pl.y && predicted.vy < 0) {
-        // head hit
-        predicted.y = pl.y + pl.h + predicted.radius;
-        predicted.vy = 0;
-      }
-    }
-  });
-
-  // jump pads
-  jumpPads.forEach(jp => {
-    if (
-      predicted.x + predicted.radius > jp.x &&
-      predicted.x - predicted.radius < jp.x + jp.w &&
-      predicted.y + predicted.radius > jp.y &&
-      predicted.y + predicted.radius < jp.y + jp.h + 0.01 &&
-      predicted.vy >= 0
-    ) {
-      predicted.vy = jp.power;
-    }
-  });
-
-  // horizontal movement & friction
-  predicted.x += predicted.vx;
-  predicted.vx *= FRICTION;
-
-  // monkey grapple glide (best-effort mirror)
-  if (predicted.class === "monkey" && predicted.grappling && predicted.grappleTarget) {
-    const dx = predicted.grappleTarget.x - predicted.x;
-    const dy = predicted.grappleTarget.y - predicted.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < 0.02) {
-      predicted.x = predicted.grappleTarget.x;
-      predicted.y = predicted.grappleTarget.y;
-      predicted.vx = 0;
-      predicted.vy = 0;
-      predicted.grappling = false;
-      predicted.grappleTarget = null;
-    } else {
-      const speed = 0.03;
-      predicted.x += (dx / dist) * speed;
-      predicted.y += (dy / dist) * speed;
-      predicted.vx = 0;
-      predicted.vy = 0;
-    }
-  }
-
-  // clamp inside world width (like server)
-  const WORLD_WIDTH = 2.0;
-  predicted.x = Math.max(predicted.radius, Math.min(WORLD_WIDTH - predicted.radius, predicted.x));
-
-  // apply reconciliation correction if any
-  if (correction.frames > 0) {
-    predicted.x += correction.dx;
-    predicted.y += correction.dy;
-    correction.frames--;
-    if (correction.frames === 0) {
-      correction.dx = 0;
-      correction.dy = 0;
-    }
-  }
-}
-
-
 
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   updateCamera();
-
-    // Advance our local predicted player (client-side prediction)
-  simulateLocalPlayerStep();
 
   // Find the bottom platform (ground)
   const bottomPlatform = platforms.find(pl => pl.y >= 0.95);
@@ -487,8 +415,7 @@ function gameLoop() {
   // Draw players
   // Draw players
 for (let id in players) {
-  // If this is our own id and we have a predicted copy, draw that predicted copy.
-  const p = (id === socket.id && predicted) ? predicted : players[id];
+  const p = players[id];
   if (id !== socket.id && p.invisible) continue; // skip drawing invisible players (but not yourself)  
   const pos = worldToScreen(p.x, p.y);
   let radius = p.radius * camera.zoom * canvas.height;
@@ -607,6 +534,8 @@ for (let id in players) {
     ctx.fillText(`Time: ${timer}`, 20, 90);
   }
   
+  
+
   if (countdown && countdown > 0) {
     ctx.font = '100px Quicksand';
     ctx.textAlign = 'center';
@@ -614,21 +543,11 @@ for (let id in players) {
     ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2);
   }
 
-    // Debug: draw prediction vs authoritative difference (optional)
-    if (predicted && players[socket.id]) {
-      const serverP = players[socket.id];
-      ctx.fillStyle = 'white';
-      ctx.font = '14px monospace';
-      ctx.fillText(`pred: ${predicted.x.toFixed(3)},${predicted.y.toFixed(3)}`, 20, 120);
-      ctx.fillText(`auth: ${serverP.x.toFixed(3)},${serverP.y.toFixed(3)}`, 20, 138);
-    }
-  
-
   // Confetti overlay
 if (Date.now() < confettiEndTime) {
   confettiParticles.forEach(p => {
     p.x += p.speedX;
-    p.y += p.speedY;
+    p.y += p.speedY * 4;
     p.rotation += p.rotationSpeed;
 
     if (p.y > canvas.height) {
@@ -647,22 +566,9 @@ if (Date.now() < confettiEndTime) {
 
   // Movement
   if (joined) {
-    if (keys['ArrowLeft'] || keys['KeyA']) {
-      socket.emit('move', 'left');
-      // Apply immediate local effect so movement feels instant:
-      if (predicted) predicted.vx -= MOVE_ACCEL;
-    }
-    if (keys['ArrowRight'] || keys['KeyD']) {
-      socket.emit('move', 'right');
-      if (predicted) predicted.vx += MOVE_ACCEL;
-    }
-    if ((keys['ArrowUp'] || keys['KeyW']) && (predicted ? predicted.onGround : players[socket.id]?.onGround)) {
-      socket.emit('move', 'jump');
-      if (predicted && predicted.onGround) {
-        predicted.vy = JUMP_FORCE;
-        predicted.onGround = false;
-      }
-    }
+    if (keys['ArrowLeft'] || keys['KeyA']) socket.emit('move', 'left');
+    if (keys['ArrowRight'] || keys['KeyD']) socket.emit('move', 'right');
+    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) socket.emit('move', 'jump');
   }
 
   requestAnimationFrame(gameLoop);
