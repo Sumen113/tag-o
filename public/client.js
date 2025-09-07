@@ -48,45 +48,6 @@ const nameInput = document.getElementById('name');
 const classButtons = document.querySelectorAll('.class-option');
 const overlay = document.getElementById('overlay-message');
 
-// --- Keep snapshots instead of replacing players instantly ---
-let snapshots = [];
-const INTERPOLATION_DELAY = 100; // ms behind real time
-
-socket.on("state", data => {
-  snapshots.push({ time: Date.now(), state: data });
-  if (snapshots.length > 20) snapshots.shift(); // avoid memory bloat
-});
-
-function getInterpolatedState() {
-  const renderTime = Date.now() - INTERPOLATION_DELAY;
-
-  for (let i = snapshots.length - 1; i >= 0; i--) {
-    const older = snapshots[i];
-    const newer = snapshots[i + 1];
-
-    if (older && newer && older.time <= renderTime && newer.time >= renderTime) {
-      const t = (renderTime - older.time) / (newer.time - older.time);
-
-      let interpolatedPlayers = {};
-      for (let id in older.state.players) {
-        const pOld = older.state.players[id];
-        const pNew = newer.state.players[id];
-        if (!pOld || !pNew) continue;
-
-        interpolatedPlayers[id] = {
-          ...pOld,
-          x: pOld.x + (pNew.x - pOld.x) * t,
-          y: pOld.y + (pNew.y - pOld.y) * t,
-        };
-      }
-
-      return { ...newer.state, players: interpolatedPlayers };
-    }
-  }
-
-  return snapshots[snapshots.length - 1]?.state || { players: {} };
-}
-
 classButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     classButtons.forEach(b => b.classList.remove('selected'));
@@ -196,13 +157,11 @@ let jumpPads = [];
 
 
 socket.on('state', data => {
-  const { players: interpPlayers, platforms: interpPlatforms, portals: interpPortals, jumpPads: interpJumpPads, itPlayer: interpItPlayer } = getInterpolatedState();
-
-  players = interpPlayers;
-  platforms = interpPlatforms || [];
-  portals = interpPortals || [];
-  jumpPads = interpJumpPads || [];
-  itPlayer = interpItPlayer;  
+  players = data.players;
+  platforms = data.platforms;
+  portals = data.portals || [];
+  jumpPads = data.jumpPads || [];
+  itPlayer = data.itPlayer;
 });
 
 socket.on("confetti", ({ duration }) => {
@@ -514,11 +473,33 @@ if (Date.now() < confettiEndTime) {
 }
 
   // Movement
-  if (joined) {
-    if (keys['ArrowLeft'] || keys['KeyA']) socket.emit('move', 'left');
-    if (keys['ArrowRight'] || keys['KeyD']) socket.emit('move', 'right');
-    if ((keys['ArrowUp'] || keys['KeyW']) && players[socket.id]?.onGround) socket.emit('move', 'jump');
+// Movement
+if (joined) {
+  const me = players[socket.id];
+  if (me) {
+    const MOVE_ACCEL = 0.0007;
+    const JUMP_FORCE = -0.02;
+
+    if (keys['ArrowLeft'] || keys['KeyA']) {
+      me.vx -= MOVE_ACCEL;        // predict locally
+      socket.emit('move', 'left');
+    }
+    if (keys['ArrowRight'] || keys['KeyD']) {
+      me.vx += MOVE_ACCEL;        // predict locally
+      socket.emit('move', 'right');
+    }
+    if ((keys['ArrowUp'] || keys['KeyW']) && me.onGround) {
+      me.vy = JUMP_FORCE;         // predict locally
+      me.onGround = false;
+      socket.emit('move', 'jump');
+    }
+
+    // Apply local physics step (simplified)
+    me.vy += 0.0005; // gravity
+    me.x += me.vx;
+    me.y += me.vy;
   }
+}
 
   requestAnimationFrame(gameLoop);
 }
