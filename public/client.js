@@ -48,6 +48,45 @@ const nameInput = document.getElementById('name');
 const classButtons = document.querySelectorAll('.class-option');
 const overlay = document.getElementById('overlay-message');
 
+// --- Keep snapshots instead of replacing players instantly ---
+let snapshots = [];
+const INTERPOLATION_DELAY = 100; // ms behind real time
+
+socket.on("state", data => {
+  snapshots.push({ time: Date.now(), state: data });
+  if (snapshots.length > 20) snapshots.shift(); // avoid memory bloat
+});
+
+function getInterpolatedState() {
+  const renderTime = Date.now() - INTERPOLATION_DELAY;
+
+  for (let i = snapshots.length - 1; i >= 0; i--) {
+    const older = snapshots[i];
+    const newer = snapshots[i + 1];
+
+    if (older && newer && older.time <= renderTime && newer.time >= renderTime) {
+      const t = (renderTime - older.time) / (newer.time - older.time);
+
+      let interpolatedPlayers = {};
+      for (let id in older.state.players) {
+        const pOld = older.state.players[id];
+        const pNew = newer.state.players[id];
+        if (!pOld || !pNew) continue;
+
+        interpolatedPlayers[id] = {
+          ...pOld,
+          x: pOld.x + (pNew.x - pOld.x) * t,
+          y: pOld.y + (pNew.y - pOld.y) * t,
+        };
+      }
+
+      return { ...newer.state, players: interpolatedPlayers };
+    }
+  }
+
+  return snapshots[snapshots.length - 1]?.state || { players: {} };
+}
+
 classButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     classButtons.forEach(b => b.classList.remove('selected'));
@@ -157,11 +196,13 @@ let jumpPads = [];
 
 
 socket.on('state', data => {
-  players = data.players;
-  platforms = data.platforms;
-  portals = data.portals || [];
-  jumpPads = data.jumpPads || [];
-  itPlayer = data.itPlayer;
+  const { players: interpPlayers, platforms: interpPlatforms, portals: interpPortals, jumpPads: interpJumpPads, itPlayer: interpItPlayer } = getInterpolatedState();
+
+  players = interpPlayers;
+  platforms = interpPlatforms || [];
+  portals = interpPortals || [];
+  jumpPads = interpJumpPads || [];
+  itPlayer = interpItPlayer;  
 });
 
 socket.on("confetti", ({ duration }) => {
