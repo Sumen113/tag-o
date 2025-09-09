@@ -233,6 +233,13 @@ function applyPhysics() {
       p.onGround = true;
     }
 
+    if (p.frozenUntil && Date.now() < p.frozenUntil) {
+      p.vx = 0;
+      p.vy = 0;
+      continue; // skip movement while frozen
+    }
+
+
     // Platform collisions
     // Platform collisions
     platforms.forEach(pl => {
@@ -446,6 +453,18 @@ io.on("connection", socket => {
   if (p.class === "clown") {
     // Tell ALL other players to show confetti for 5s
     socket.broadcast.emit("confetti", { duration: 5000 });
+  }
+
+  if (p.class === "snowman") {
+  // Freeze ALL other players for 3s
+    socket.broadcast.emit("freeze", { duration: 3000 });
+  
+    // Optionally mark them frozen server-side too
+    for (let id in players) {
+      if (id !== socket.id) {
+        players[id].frozenUntil = Date.now() + 3000;
+      }
+    }
   }
 });  
 
