@@ -28,8 +28,10 @@ let abilityCooldown = 0;
 const classImages = {
   ninja: new Image(),
   monkey: new Image(),
-  clown: new Image()
+  clown: new Image(),
+  snowman: new Image()   // 👈 add this
 };
+classImages.snowman.src = "./images/snowman.png"; // make sure the file exists
 classImages.ninja.src = "./images/ninja.png"; // make sure this file exists
 classImages.monkey.src = "./images/monkey.png"; // make sure this file exists
 classImages.clown.src = "./images/clown.png"; // make sure this file exists
@@ -79,6 +81,7 @@ joinBtn.addEventListener('click', () => {
   if (playerClass === "ninja") abilityName.innerText = "Invisibility";
   if (playerClass === "monkey") abilityName.innerText = "Grapple";  
   if (playerClass === "clown") abilityName.innerText = "Confetti";  
+  if (playerClass === "snowman") abilityName.innerText = "Freeze";
   abilityTimer.innerText = "Ready";
 
   // fade out join screen
@@ -126,7 +129,11 @@ function tryActivateAbility() {
   if (playerClass === "clown") {
     abilityCooldown = 40; // seconds
     startAbilityCooldownUI("Confetti");
-  }  
+  }
+  if (playerClass === "snowman") {
+    abilityCooldown = 75; // seconds (tweak if needed)
+    startAbilityCooldownUI("Freeze");
+  }
 }
 
 function startConfetti(duration) {
@@ -254,6 +261,22 @@ socket.on("mapVoteUpdate", tally => {
   tally.forEach((count, i) => {
     buttons[i].innerText = `Map ${i + 1} (${count} votes)`;
   });
+});
+
+let frozenUntil = 0;
+
+socket.on("freeze", ({ duration }) => {
+  frozenUntil = Date.now() + duration;
+});
+
+// Block movement if frozen
+window.addEventListener('keydown', e => {
+  if (Date.now() < frozenUntil) return; // ❄ can't move
+  keys[e.code] = true;
+});
+window.addEventListener('keyup', e => {
+  if (Date.now() < frozenUntil) return;
+  keys[e.code] = false;
 });
 
 socket.on("confetti", ({ duration }) => {
