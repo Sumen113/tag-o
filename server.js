@@ -20,6 +20,7 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 
 let players = {};
 
+const MAP_NAMES = ["Grass", "Moon"];
 // Predefined maps
 const MAPS = [
   // Map 1
@@ -56,19 +57,29 @@ const MAPS = [
     { x: 0.80, y: 0.18, w: 0.35, h: 0.03, type: "static" }
   ],
   // Map 2
+  // Map 2 (fun version)
   [
-    { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
-    { x: 0.10, y: 0.65, w: 0.35, h: 0.03, type: "static" },
-    { x: 1.20, y: 0.65, w: 0.35, h: 0.03, type: "static" },
-    { x: 0.60, y: 0.40, w: 0.80, h: 0.03, type: "static" }
-  ],
-  // Map 3
-  [
-    { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" },
-    { x: 0.50, y: 0.70, w: 0.40, h: 0.03, type: "static" },
-    { x: 0.20, y: 0.50, w: 0.30, h: 0.03, type: "static" },
-    { x: 1.30, y: 0.50, w: 0.30, h: 0.03, type: "static" },
-    { x: 0.80, y: 0.30, w: 0.40, h: 0.03, type: "static" }
+    { x: 0, y: 0.89, w: 2.0, h: 0.03, type: "static" }, // ground
+
+    // Bottom left
+    { x: 0.05, y: 0.75, w: 0.25, h: 0.03, type: "static" },
+    { x: 0.30, y: 0.62, w: 0.25, h: 0.03, type: "static" },
+
+    // Bottom right
+    { x: 1.40, y: 0.75, w: 0.25, h: 0.03, type: "static" },
+    { x: 1.10, y: 0.62, w: 0.25, h: 0.03, type: "static" },
+
+    // Mid-center
+    { x: 0.55, y: 0.48, w: 0.45, h: 0.03, type: "static" },
+    
+    // Upper-left
+    { x: 0.20, y: 0.35, w: 0.25, h: 0.03, type: "static" },
+
+    // Upper-right slant
+    { x: 1.30, y: 0.35, w: 0.25, h: 0.03, type: "static"},
+
+    // Top-center
+    { x: 0.75, y: 0.20, w: 0.35, h: 0.03, type: "static" }
   ]
 ];
 
@@ -93,10 +104,11 @@ let voting = false;
 function startVoting() {
   votes = {};
   voting = true;
-  io.emit("mapVoteStart", { maps: MAPS.length });
+  io.emit("mapVoteStart", { maps: MAPS.length, names: MAP_NAMES });
 
   setTimeout(finishVoting, 8000); // 8 seconds to vote
 }
+
 
 function finishVoting() {
   voting = false;
@@ -150,11 +162,14 @@ function startTimer() {
 
 function resetGame() {
   if (Object.keys(players).length >= 2) {
-    startGame();
+    // 🆕 Start a fresh vote instead of reusing the old map
+    startVoting();
   } else {
     gameRunning = false;
     itPlayer = null;
     portals = [];
+    // Reset to default map so next player doesn't get stuck on last map
+    platforms = MAPS[0];
   }
 }
 
@@ -392,12 +407,18 @@ io.on("connection", socket => {
       y: 0.5,
       vx: 0,
       vy: 0,
-      radius: 0.02, 
-      hitRadius: 0.01, 
+      radius: 0.02,
+      hitRadius: 0.01,
       onGround: false,
       isIt: false,
       lastTagged: 0
-    };    
+    };
+  
+    // Send current game state immediately so they see the map
+    socket.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
+  
+    // 🆕 Tell client to transition background even if no voting happened
+    socket.emit("initGame");
 
     socket.on("voteMap", index => {
       if (voting && index >= 0 && index < MAPS.length) {
@@ -475,7 +496,16 @@ io.on("connection", socket => {
   }
 
   delete players[socket.id];
-  if (Object.keys(players).length < 2) gameRunning = false;
+
+  if (Object.keys(players).length < 2) {
+    gameRunning = false;
+
+    // 🆕 if exactly one player remains, reload their page
+    if (Object.keys(players).length === 1) {
+      const remainingId = Object.keys(players)[0];
+      io.to(remainingId).emit("reloadPage");
+    }
+  }
 });
 });
 

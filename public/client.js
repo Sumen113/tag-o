@@ -13,7 +13,6 @@ let timer = 0;
 
 let voteActive = false;
 let voteOptions = 0;
-let voted = false;
 let waitingMessage = false;
 
 let confettiParticles = [];
@@ -35,6 +34,17 @@ classImages.snowman.src = "./images/snowman.png"; // make sure the file exists
 classImages.ninja.src = "./images/ninja.png"; // make sure this file exists
 classImages.monkey.src = "./images/monkey.png"; // make sure this file exists
 classImages.clown.src = "./images/clown.png"; // make sure this file exists
+
+// Platform texture
+const grassBlockImg = new Image();
+grassBlockImg.src = "./images/grass.png";
+
+const moonBlockImg = new Image();
+moonBlockImg.src = "./images/moon.png";
+
+// Portal image
+const portalImg = new Image();
+portalImg.src = "./images/portal.png"; // 👈 Make sure this file exists
 
 // Camera
 let camera = { x: 0.5, y: 0.5, zoom: 3 };
@@ -119,20 +129,21 @@ function tryActivateAbility() {
   if (!joined) return;
   if (abilityCooldown > 0) return; 
   socket.emit('useAbility');
-  abilityCooldown = 60; // seconds
   if (playerClass === "ninja") {
+    abilityCooldown = 60; // seconds
     startAbilityCooldownUI("Invisibility");
   }
   if (playerClass === "monkey") {
+    abilityCooldown = 55; // seconds
     startAbilityCooldownUI("Grapple");
+  }
+  if (playerClass === "snowman") {
+    abilityCooldown = 75; // seconds
+    startAbilityCooldownUI("Freeze");
   }
   if (playerClass === "clown") {
     abilityCooldown = 40; // seconds
     startAbilityCooldownUI("Confetti");
-  }
-  if (playerClass === "snowman") {
-    abilityCooldown = 75; // seconds (tweak if needed)
-    startAbilityCooldownUI("Freeze");
   }
 }
 
@@ -157,7 +168,6 @@ function startConfetti(duration) {
 function startAbilityCooldownUI(name) {
   abilityUI.classList.add("disabled");
   abilityName.textContent = name;
-  abilityCooldown = 40;
   abilityTimer.textContent = abilityCooldown;
 
   const cdInterval = setInterval(() => {
@@ -190,8 +200,9 @@ socket.on("waitingForPlayers", () => {
   overlay.textContent = "Waiting for more players...";
   overlay.classList.add("show");
 });
-
+let chosenMapIndex = 0; // default
 socket.on("mapChosen", chosen => {
+  chosenMapIndex = chosen;
   // Remove vote UI if it exists
   if (voteUI) {
     voteUI.remove();
@@ -203,7 +214,9 @@ socket.on("mapChosen", chosen => {
   overlay.style.top = "-25%"; // 👈 quarter down the screen
   overlay.style.fontSize = "60px"; // optional: make it big
   overlay.style.textAlign = "center";
-  overlay.textContent = `Map ${chosen + 1} chosen!`;
+  overlay.textContent = mapNames && mapNames[chosen]
+  ? `${mapNames[chosen]} chosen!`
+  : `Map ${chosen + 1} chosen!`;
   overlay.classList.add("show"); // show overlay
 
   // Fade in / fade out
@@ -213,7 +226,10 @@ socket.on("mapChosen", chosen => {
 
 let voteUI = null;
 
-socket.on("mapVoteStart", ({ maps }) => {
+
+let mapNames = [];
+socket.on("mapVoteStart", ({ maps, names }) => {
+  mapNames = names;
   overlay.classList.remove("show"); // hide waiting msg
 
   voteUI = document.createElement("div");
@@ -238,17 +254,18 @@ socket.on("mapVoteStart", ({ maps }) => {
 
   for (let i = 0; i < maps; i++) {
     const btn = document.createElement("button");
-    btn.innerText = `Map ${i + 1} (0 votes)`;
+    const mapName = names ? names[i] : `Map ${i + 1}`;
+    btn.innerText = `${mapName} (0 votes)`;
     btn.style.margin = "10px";
     btn.className = "vote-btn";
     btn.onclick = () => {
-      if (!voted) {
-        socket.emit("voteMap", i);
-        voted = true;
-        // Highlight your choice
-        btn.classList.add("selected");
-      }
-    };
+      // 🆕 Allow re-voting by always sending new vote
+      socket.emit("voteMap", i);
+    
+      // Highlight your new choice and un-highlight others
+      document.querySelectorAll(".vote-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+    };    
     voteUI.appendChild(btn);
   }
 
@@ -259,8 +276,19 @@ socket.on("mapVoteUpdate", tally => {
   if (!voteUI) return;
   const buttons = voteUI.querySelectorAll(".vote-btn");
   tally.forEach((count, i) => {
-    buttons[i].innerText = `Map ${i + 1} (${count} votes)`;
+    buttons[i].innerText = mapNames && mapNames[i] 
+    ? `${mapNames[i]} (${count} votes)` 
+    : `Map ${i + 1} (${count} votes)`;
+  
   });
+});
+
+socket.on("initGame", () => {
+  document.body.classList.add("joined");
+});
+
+socket.on("reloadPage", () => {
+  location.reload(); // 🆕 reload the whole page
 });
 
 let frozenUntil = 0;
@@ -350,36 +378,58 @@ function gameLoop() {
   const bottomPlatform = platforms.find(pl => pl.y >= 0.95);
 
 
-  // Draw platforms with curved corners
-  ctx.fillStyle = '#444';
-  const cornerRadius = 5; // pixels, adjust as needed
-  platforms.forEach(pl => {
-    const topLeft = worldToScreen(pl.x, pl.y);
-    const width = pl.w * camera.zoom * canvas.width;
-    const height = pl.h * camera.zoom * canvas.height;
+// Draw platforms with grass texture + rounded corners
+platforms.forEach(pl => {
+  if (!grassBlockImg.complete) return; // wait until image loads
 
-    // Using roundRect
-    if (ctx.roundRect) {
-      ctx.beginPath();
-      ctx.roundRect(topLeft.x, topLeft.y, width, height, cornerRadius);
-      ctx.fill();
-    } else {
-      // fallback: manual rounded rectangle
-      ctx.beginPath();
-      ctx.moveTo(topLeft.x + cornerRadius, topLeft.y);
-      ctx.lineTo(topLeft.x + width - cornerRadius, topLeft.y);
-      ctx.quadraticCurveTo(topLeft.x + width, topLeft.y, topLeft.x + width, topLeft.y + cornerRadius);
-      ctx.lineTo(topLeft.x + width, topLeft.y + height - cornerRadius);
-      ctx.quadraticCurveTo(topLeft.x + width, topLeft.y + height, topLeft.x + width - cornerRadius, topLeft.y + height);
-      ctx.lineTo(topLeft.x + cornerRadius, topLeft.y + height);
-      ctx.quadraticCurveTo(topLeft.x, topLeft.y + height, topLeft.x, topLeft.y + height - cornerRadius);
-      ctx.lineTo(topLeft.x, topLeft.y + cornerRadius);
-      ctx.quadraticCurveTo(topLeft.x, topLeft.y, topLeft.x + cornerRadius, topLeft.y);
-      ctx.fill();
+  const topLeft = worldToScreen(pl.x, pl.y);
+  const width = pl.w * camera.zoom * canvas.width;
+  const height = pl.h * camera.zoom * canvas.height;
+
+  // Determine square tile size (smallest dimension)
+  const tileSize = Math.min(width, height);
+  const cols = Math.ceil(width / tileSize);
+  const rows = Math.ceil(height / tileSize);
+
+  const cornerRadius = 8; // keep your rounded corner look
+
+  ctx.save(); // save current state so clip only affects this platform
+
+  // --- Create rounded rect path and clip ---
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(topLeft.x, topLeft.y, width, height, cornerRadius);
+    ctx.clip();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(topLeft.x + cornerRadius, topLeft.y);
+    ctx.lineTo(topLeft.x + width - cornerRadius, topLeft.y);
+    ctx.quadraticCurveTo(topLeft.x + width, topLeft.y, topLeft.x + width, topLeft.y + cornerRadius);
+    ctx.lineTo(topLeft.x + width, topLeft.y + height - cornerRadius);
+    ctx.quadraticCurveTo(topLeft.x + width, topLeft.y + height, topLeft.x + width - cornerRadius, topLeft.y + height);
+    ctx.lineTo(topLeft.x + cornerRadius, topLeft.y + height);
+    ctx.quadraticCurveTo(topLeft.x, topLeft.y + height, topLeft.x, topLeft.y + height - cornerRadius);
+    ctx.lineTo(topLeft.x, topLeft.y + cornerRadius);
+    ctx.quadraticCurveTo(topLeft.x, topLeft.y, topLeft.x + cornerRadius, topLeft.y);
+    ctx.clip();
+  }
+
+  // --- Draw tiled grass inside clipped region ---
+  // Choose block texture based on map
+  const blockImg = (mapNames[chosenMapIndex]?.toLowerCase().includes("moon")) ? moonBlockImg : grassBlockImg;
+
+  // Draw tiled blocks inside clipped region
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const tileX = topLeft.x + i * tileSize;
+      const tileY = topLeft.y + j * tileSize;
+      ctx.drawImage(blockImg, tileX, tileY, tileSize, tileSize);
     }
-  });
+  }
 
 
+  ctx.restore(); // restore context so clipping doesn't affect next platform
+});
   // Draw portals
   portals.forEach((portal, index) => {
     if (!portal.active) return; // skip inactive portals
@@ -387,24 +437,28 @@ function gameLoop() {
     const pos = worldToScreen(portal.x, portal.y);
     const radius = 0.03 * camera.zoom * canvas.height; // size of portal
 
-    ctx.beginPath();
-    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
-    
-    // Different color for each portal
-    ctx.strokeStyle = index === 0 ? 'blue' : 'purple';
-    ctx.lineWidth = 6;
-    ctx.shadowColor = index === 0 ? 'blue' : 'purple';
-    ctx.shadowBlur = 20;
-    ctx.stroke();
-    ctx.shadowBlur = 0; // reset for other drawings
+    if (portalImg.complete) {
+      const size = radius * 3; // adjust scaling
+      ctx.drawImage(portalImg, pos.x - size / 2, pos.y - size / 2, size, size);
+    } else {
+      // fallback circle if image not loaded yet
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = index === 0 ? 'blue' : 'purple';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = index === 0 ? 'blue' : 'purple';
+      ctx.shadowBlur = 20;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }    
 
     ctx.font = `${14 * camera.zoom}px Quicksand`;
     ctx.textAlign = 'center';
     ctx.fillStyle = 'white';
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
-    ctx.strokeText(`Portal ${index + 1}`, pos.x, pos.y - radius - 10);
-    ctx.fillText(`Portal ${index + 1}`, pos.x, pos.y - radius - 10);
+    ctx.strokeText(`Portal`, pos.x, pos.y - radius - 10);
+    ctx.fillText(`Portal`, pos.x, pos.y - radius - 10);
   });
 
   // Draw jump pads
@@ -450,6 +504,9 @@ for (let id in players) {
   if (p.class === "clown") {
     radius *= 1.50
   }
+  if (p.class === "snowman") {
+    radius *= 1.50
+  }
 
   
   if (id === socket.id && p.invisible) {
@@ -472,12 +529,14 @@ for (let id in players) {
     }
     
     let yOffset = 0;
+    if (p.class === "snowman") {
+      yOffset = -radius * 0.32; // move clown image up by ~15% of its size
+    }
     if (p.class === "clown") {
       yOffset = -radius * 0.30; // move clown image up by ~15% of its size
     }
     
     ctx.drawImage(img, pos.x - radius, pos.y - radius + yOffset, size, size);
-
     
     ctx.restore();
     ctx.globalAlpha = 1.0; // reset alpha after drawing    
