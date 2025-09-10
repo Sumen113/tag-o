@@ -257,7 +257,7 @@ body.joined #ability-ui:hover:not(.disabled) {
   width: 175%;          /* smaller than the button */
   height: auto;
   position: relative;
-  top: -43px;
+  top: -47px;
   left: 0.3px;
   z-index: 2;
 }
