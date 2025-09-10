@@ -246,6 +246,22 @@ body.joined #ability-ui:hover:not(.disabled) {
   z-index: 2;
 }
 
+.class-option[data-class="snowman"] {
+  overflow: visible;        /* allow sticking out */
+  display: flex;            /* use flexbox to center */
+  justify-content: center;  /* center horizontally */
+  align-items: flex-start;  /* align to the top of button */
+}
+
+.class-option[data-class="snowman"] img {
+  width: 175%;          /* smaller than the button */
+  height: auto;
+  position: relative;
+  top: -45px;
+  left: 0.3px;
+  z-index: 2;
+}
+
 .vote-btn {
   padding: 12px 25px;
   font-size: 18px;
