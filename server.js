@@ -409,16 +409,17 @@ setInterval(() => {
 
 
 io.on("connection", socket => {
+  // When a new client joins
   socket.on("join", ({ name, class: playerClass }) => {
     let originalName = name;
     let finalName = name;
 
-    // Check if entered text matches a secret password
+    // Secret username check
     for (const [specialUser, password] of Object.entries(SPECIAL_USERNAMES)) {
       if (originalName === password) {
-        finalName = specialUser; // replace password with the real username
+        finalName = specialUser;
       } else if (originalName === specialUser) {
-        finalName = "copycat";   // block direct username usage
+        finalName = "copycat";
       }
     }
 
@@ -429,22 +430,92 @@ io.on("connection", socket => {
       vx: 0,
       vy: 0,
       radius: 0.03,
+      hitRadius: 0.03,
       name: finalName,
       class: playerClass,
       onGround: false,
       isIt: false,
       invisible: false,
+      frozenUntil: 0,
+      grappling: false,
+      grappleTarget: null,
+      invisibleUntil: 0,
+      lastTagged: 0
     };
 
     socket.emit("initGame");
     io.emit("state", { players, platforms, portals, jumpPads, itPlayer });
   });
 
+  // Movement input
+  const MOVE_ACCEL = 0.0007;
+  socket.on("move", dir => {
+    const p = players[socket.id];
+    if (!p) return;
+
+    if (dir === "left") p.vx -= MOVE_ACCEL;
+    if (dir === "right") p.vx += MOVE_ACCEL;
+    if (dir === "jump" && p.onGround) {
+      p.vy = JUMP_FORCE;
+      p.onGround = false;
+    }
+  });
+
+  // Abilities
+  socket.on("useAbility", () => {
+    const p = players[socket.id];
+    if (!p) return;
+
+    if (p.class === "ninja") {
+      p.invisibleUntil = Date.now() + 5000;
+    }
+
+    if (p.class === "monkey") {
+      const platform = platforms[Math.floor(Math.random() * platforms.length)];
+      if (!platform) return;
+
+      const targetX = platform.x + Math.random() * platform.w;
+      const targetY = platform.y - p.radius - 0.01;
+      p.grappleTarget = { x: targetX, y: targetY };
+      p.grappling = true;
+    }
+
+    if (p.class === "clown") {
+      socket.broadcast.emit("confetti", { duration: 5000 });
+    }
+
+    if (p.class === "snowman") {
+      socket.broadcast.emit("freeze", { duration: 3000 });
+      for (let id in players) {
+        if (id !== socket.id) {
+          players[id].frozenUntil = Date.now() + 3000;
+        }
+      }
+    }
+  });
+
+  // Disconnect
   socket.on("disconnect", () => {
+    if (itPlayer === socket.id) {
+      itPlayer = null;
+      pickRandomIt();
+    }
+
     delete players[socket.id];
+
+    if (Object.keys(players).length < 2) {
+      gameRunning = false;
+
+      if (Object.keys(players).length === 1) {
+        const remainingId = Object.keys(players)[0];
+        io.to(remainingId).emit("reloadPage");
+      }
+    }
+
     io.emit("state", { players, platforms, portals, jumpPads, itPlayer });
   });
 });
+
 
 
   const MOVE_ACCEL = 0.0007; // tweak for acceleration speed
@@ -518,6 +589,5 @@ io.on("connection", socket => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
 
 
