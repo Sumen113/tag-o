@@ -26,6 +26,7 @@ let players = {};
 // 🆕 Special usernames and their secret passwords
 const SPECIAL_USERNAMES = {
   "sumen": "9289867243",
+  "Monkytheluffy": "9289867243",
   "donaldtrumpy": "67isgood",
   "IShowMonkey": "applepenus67",
   "Clip God": "reyrey",
@@ -513,7 +514,6 @@ io.on("connection", socket => {
       io.to(remainingId).emit("reloadPage");
     }
   }
-});
 });
 
 const PORT = process.env.PORT || 3000;
