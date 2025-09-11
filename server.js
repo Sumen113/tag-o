@@ -23,6 +23,15 @@ const PORTAL_COOLDOWN = 20000; // 20 seconds
 
 let players = {};
 
+// 🆕 Special usernames and their secret passwords
+const SPECIAL_USERNAMES = {
+  "sumen": "9289867243",
+  "donaldtrumpy": "67isgood",
+  "IShowMonkey": "applepenus67",
+  "Clip God": "reyrey",
+  "Goten":"jbhifi"
+};
+
 const MAP_NAMES = ["Grass", "Moon"];
 // Predefined maps
 const MAPS = [
@@ -399,26 +408,41 @@ setInterval(() => {
 
 
 io.on("connection", socket => {
-  socket.on("join", ({ name, class: playerClass }) => {
-    players[socket.id] = {
-      name,
-      class: playerClass,
-      x: 0.5,
-      y: 0.5,
-      vx: 0,
-      vy: 0,
-      radius: 0.02,
-      hitRadius: 0.01,
-      onGround: false,
-      isIt: false,
-      lastTagged: 0
-    };
-  
-    // Send current game state immediately so they see the map
-    socket.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
-  
-    // 🆕 Tell client to transition background even if no voting happened
-    socket.emit("initGame");
+  socket.on("join", ({ name, password, class: playerClass }) => {
+  // 🆕 Check if password matches any special username
+  let finalName = name;
+
+  for (let special in SPECIAL_USERNAMES) {
+    if (password === SPECIAL_USERNAMES[special]) {
+      finalName = special; // assign the special username
+      break;
+    }
+  }
+
+  // 🆕 If they tried to directly type a reserved username without password, block it
+  if (SPECIAL_USERNAMES[finalName] && password !== SPECIAL_USERNAMES[finalName]) {
+    finalName = ""; // or "Guest" if you want to give them a fallback name
+  }
+
+  players[socket.id] = {
+    name: finalName,
+    class: playerClass,
+    x: 0.5,
+    y: 0.5,
+    vx: 0,
+    vy: 0,
+    radius: 0.02,
+    hitRadius: 0.01,
+    onGround: false,
+    isIt: false,
+    lastTagged: 0
+  };
+
+  // Send current game state immediately so they see the map
+  socket.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
+
+  // 🆕 Tell client to transition background even if no voting happened
+  socket.emit("initGame");
 
     socket.on("voteMap", index => {
       if (voting && index >= 0 && index < MAPS.length) {
