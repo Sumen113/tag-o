@@ -7,6 +7,9 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static("public"));
+app.get("/", (req, res) => {
+  res.send("Server is running");
+});
 
 const TICK_RATE = 60;
 const GAME_DURATION = 180;
@@ -290,10 +293,6 @@ function applyPhysics() {
       ) {
         p.vy = jp.power; // apply strong jump force
       }
-    });
-
-    app.get('/', (req, res) => {
-      res.send('Server is running');
     });
 
     // Horizontal bounds
