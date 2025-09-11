@@ -11,7 +11,7 @@ app.use(express.static("public"));
 const TICK_RATE = 60;
 const GAME_DURATION = 180;
 const JUMP_FORCE = -0.02;
-const GRAVITY = 0.0005;
+let gravity = 0.0005;
 const TAG_COOLDOWN = 500; // milliseconds
 
 let portals = [];
@@ -120,6 +120,7 @@ function finishVoting() {
 
   let chosen = winners[Math.floor(Math.random() * winners.length)];
   platforms = MAPS[chosen];
+  gravity = chosen === 1 ? 0.0002 : 0.0005;
   io.emit("mapChosen", chosen);
 
   startGame();
@@ -237,7 +238,7 @@ function applyPhysics() {
 
     let p = players[id];
     if (!p) continue;
-    p.vy += GRAVITY;
+    p.vy += gravity;
     p.y += p.vy;
     p.onGround = false;
 
