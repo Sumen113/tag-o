@@ -408,60 +408,43 @@ setInterval(() => {
 
 
 io.on("connection", socket => {
-  socket.on("join", ({ name, password, class: playerClass }) => {
-  // 🆕 Check if password matches any special username
-  let finalName = name;
+  socket.on("join", ({ name, class: playerClass }) => {
+    let originalName = name;
+    let finalName = name;
 
-  for (let special in SPECIAL_USERNAMES) {
-    if (password === SPECIAL_USERNAMES[special]) {
-      finalName = special; // assign the special username
-      break;
-    }
-  }
-
-  // 🆕 If they tried to directly type a reserved username without password, block it
-  if (SPECIAL_USERNAMES[finalName] && password !== SPECIAL_USERNAMES[finalName]) {
-    finalName = ""; // or "Guest" if you want to give them a fallback name
-  }
-
-  players[socket.id] = {
-    name: finalName,
-    class: playerClass,
-    x: 0.5,
-    y: 0.5,
-    vx: 0,
-    vy: 0,
-    radius: 0.02,
-    hitRadius: 0.01,
-    onGround: false,
-    isIt: false,
-    lastTagged: 0
-  };
-
-  // Send current game state immediately so they see the map
-  socket.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
-
-  // 🆕 Tell client to transition background even if no voting happened
-  socket.emit("initGame");
-
-    socket.on("voteMap", index => {
-      if (voting && index >= 0 && index < MAPS.length) {
-        votes[socket.id] = index;
-
-        // send updated tally to everyone
-        let tally = new Array(MAPS.length).fill(0);
-        Object.values(votes).forEach(v => tally[v]++);
-        io.emit("mapVoteUpdate", tally);        
+    // Check if entered text matches a secret password
+    for (const [specialUser, password] of Object.entries(SPECIAL_USERNAMES)) {
+      if (originalName === password) {
+        finalName = specialUser; // replace password with the real username
+      } else if (originalName === specialUser) {
+        finalName = "copycat";   // block direct username usage
       }
-    });  
+    }
 
-    if (Object.keys(players).length === 1) {
-      socket.emit("waitingForPlayers");
-    }    
-    if (Object.keys(players).length >= 2 && !gameRunning && !voting) {
-      startVoting();
-    }    
+    // Create player
+    players[socket.id] = {
+      x: Math.random() * 1.5 + 0.25,
+      y: 0.2,
+      vx: 0,
+      vy: 0,
+      radius: 0.03,
+      name: finalName,
+      class: playerClass,
+      onGround: false,
+      isIt: false,
+      invisible: false,
+    };
+
+    socket.emit("initGame");
+    io.emit("state", { players, platforms, portals, jumpPads, itPlayer });
   });
+
+  socket.on("disconnect", () => {
+    delete players[socket.id];
+    io.emit("state", { players, platforms, portals, jumpPads, itPlayer });
+  });
+});
+
 
   const MOVE_ACCEL = 0.0007; // tweak for acceleration speed
 
