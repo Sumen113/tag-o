@@ -26,10 +26,12 @@ let players = {};
 // 🆕 Special usernames and their secret passwords
 const SPECIAL_USERNAMES = {
   "sumen": "9289867243",
-  "Monkytheluffy": "9289867243",
   "donaldtrumpy": "67isgood",
   "IShowMonkey": "applepenus67",
   "Clip God": "reyrey",
+  "NoAuraEdwin": "edwin",
+  "MonkeyDLuffy": "jamiemonkey",
+  "SKILLZ": "jaydey",
   "Goten":"jbhifi"
 };
 
@@ -334,6 +336,30 @@ function applyPhysics() {
         p.vy = 0;
       }
     }
+    // Alien abduct glide
+    if (p.abducting && p.abductTarget) {
+      const dx = p.abductTarget.x - p.x;
+      const dy = p.abductTarget.y - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < 0.02) {
+        // Arrived
+        p.x = p.abductTarget.x;
+        p.y = p.abductTarget.y;
+        p.vx = 0;
+        p.vy = 0;
+        p.abducting = false;
+        p.abductTarget = null;
+      } else {
+        // Smooth glide
+        const speed = 0.02;
+        p.x += (dx / dist) * speed;
+        p.y += (dy / dist) * speed;
+        p.vx = 0;
+        p.vy = 0;
+      }
+    }
+    
 
     // Keep player inside bounds
     const WORLD_WIDTH = 2.0;
@@ -409,114 +435,91 @@ setInterval(() => {
 
 
 io.on("connection", socket => {
-  // When a new client joins
-  socket.on("join", ({ name, class: playerClass }) => {
-    let originalName = name;
-    let finalName = name;
+  socket.on("join", ({ name, password, class: playerClass }) => {
+    let inputName = (name || "").trim();
+    let inputPass = (password || "").trim();
+    let finalName = inputName;
 
-    // Secret username check
-    for (const [specialUser, password] of Object.entries(SPECIAL_USERNAMES)) {
-      if (originalName === password) {
-        finalName = specialUser;
-      } else if (originalName === specialUser) {
-        finalName = "copycat";
+    // ✅ Support "username:password" in the name box
+    if (inputName.includes(":")) {
+      const parts = inputName.split(":");
+      inputName = parts[0].trim();
+      inputPass = parts[1]?.trim() || "";
+    }
+
+    // Check if the entered name OR password matches a special username
+    let matched = false;
+
+    // Check for special usernames
+    for (let special in SPECIAL_USERNAMES) {
+      const correctPass = SPECIAL_USERNAMES[special];
+
+      // Check if someone else is already using this reserved username
+      const taken = Object.values(players).some(p => p.name === special);
+
+      if (inputName.toLowerCase() === special.toLowerCase() && inputPass === correctPass) {
+        finalName = taken ? "COPYCAT" : special; // assign if not taken
+        matched = true;
+        break;
+      }
+
+      // typed password directly in the name box
+      if (inputName === correctPass) {
+        finalName = taken ? "COPYCAT" : special;
+        matched = true;
+        break;
+      }
+
+      // typed reserved username but wrong password
+      if (inputName.toLowerCase() === special.toLowerCase() && inputPass !== correctPass) {
+        finalName = "COPYCAT";
+        matched = true;
+        break;
       }
     }
 
-    // Create player
+    // Fallback for empty or unmatched names
+    if (!matched && finalName === "") finalName = "Guest" + Math.floor(Math.random() * 1000);
+
     players[socket.id] = {
-      x: Math.random() * 1.5 + 0.25,
-      y: 0.2,
-      vx: 0,
-      vy: 0,
-      radius: 0.03,
-      hitRadius: 0.03,
       name: finalName,
       class: playerClass,
+      x: 0.5,
+      y: 0.5,
+      vx: 0,
+      vy: 0,
+      radius: 0.02,
+      hitRadius: 0.01,
       onGround: false,
       isIt: false,
-      invisible: false,
-      frozenUntil: 0,
-      grappling: false,
-      grappleTarget: null,
-      invisibleUntil: 0,
-      lastTagged: 0
-    };
+      lastTagged: 0,
+      color: (finalName.toLowerCase() === "sumen") ? "#1fd128" : "white" // 👈 add this
+    };    
 
+    // Send current game state immediately so they see the map
+    socket.emit("state", { players, platforms, portals, jumpPads, gameRunning, itPlayer });
+
+    // 🆕 Tell client to transition background even if no voting happened
     socket.emit("initGame");
-    io.emit("state", { players, platforms, portals, jumpPads, itPlayer });
-  });
 
-  // Movement input
-  const MOVE_ACCEL = 0.0007;
-  socket.on("move", dir => {
-    const p = players[socket.id];
-    if (!p) return;
+    socket.on("voteMap", index => {
+      if (voting && index >= 0 && index < MAPS.length) {
+        votes[socket.id] = index;
 
-    if (dir === "left") p.vx -= MOVE_ACCEL;
-    if (dir === "right") p.vx += MOVE_ACCEL;
-    if (dir === "jump" && p.onGround) {
-      p.vy = JUMP_FORCE;
-      p.onGround = false;
-    }
-  });
-
-  // Abilities
-  socket.on("useAbility", () => {
-    const p = players[socket.id];
-    if (!p) return;
-
-    if (p.class === "ninja") {
-      p.invisibleUntil = Date.now() + 5000;
-    }
-
-    if (p.class === "monkey") {
-      const platform = platforms[Math.floor(Math.random() * platforms.length)];
-      if (!platform) return;
-
-      const targetX = platform.x + Math.random() * platform.w;
-      const targetY = platform.y - p.radius - 0.01;
-      p.grappleTarget = { x: targetX, y: targetY };
-      p.grappling = true;
-    }
-
-    if (p.class === "clown") {
-      socket.broadcast.emit("confetti", { duration: 5000 });
-    }
-
-    if (p.class === "snowman") {
-      socket.broadcast.emit("freeze", { duration: 3000 });
-      for (let id in players) {
-        if (id !== socket.id) {
-          players[id].frozenUntil = Date.now() + 3000;
-        }
+        // send updated tally to everyone
+        let tally = new Array(MAPS.length).fill(0);
+        Object.values(votes).forEach(v => tally[v]++);
+        io.emit("mapVoteUpdate", tally);        
       }
-    }
+    });  
+
+    if (Object.keys(players).length === 1) {
+      socket.emit("waitingForPlayers");
+    }    
+    if (Object.keys(players).length >= 2 && !gameRunning && !voting) {
+      startVoting();
+    }    
   });
-
-  // Disconnect
-  socket.on("disconnect", () => {
-    if (itPlayer === socket.id) {
-      itPlayer = null;
-      pickRandomIt();
-    }
-
-    delete players[socket.id];
-
-    if (Object.keys(players).length < 2) {
-      gameRunning = false;
-
-      if (Object.keys(players).length === 1) {
-        const remainingId = Object.keys(players)[0];
-        io.to(remainingId).emit("reloadPage");
-      }
-    }
-
-    io.emit("state", { players, platforms, portals, jumpPads, itPlayer });
-  });
-});
-
-
 
   const MOVE_ACCEL = 0.0007; // tweak for acceleration speed
 
@@ -566,6 +569,65 @@ io.on("connection", socket => {
       }
     }
   }
+  if (p.class === "mole") {
+    // Find the *closest* platform directly under the mole
+    let platformBelow = null;
+    let minY = Infinity;
+
+    for (let pl of platforms) {
+      const isBelow = 
+        p.x > pl.x && 
+        p.x < pl.x + pl.w &&          // mole is horizontally within platform
+        p.y + p.radius <= pl.y + 0.01 && // platform is below mole
+        pl.y < 0.95;                  // exclude bottom ground
+
+      if (isBelow && pl.y < minY) {
+        minY = pl.y;
+        platformBelow = pl;
+      }
+    }
+
+    if (platformBelow) {
+      // Move mole just under that platform
+      p.y = platformBelow.y + platformBelow.h + p.radius + 0.01;
+      p.vy = 0.01; // small push down
+    }
+  }
+  if (p.class === "alien") {
+    // Pick a random other player
+    const otherIds = Object.keys(players).filter(id => id !== socket.id);
+    if (otherIds.length === 0) return; // no one else to abduct
+    const targetId = otherIds[Math.floor(Math.random() * otherIds.length)];
+    const target = players[targetId];
+
+    // Choose a random destination on the map
+    const destPlatform = platforms[Math.floor(Math.random() * platforms.length)];
+    const destX = destPlatform.x + destPlatform.w * Math.random();
+    const destY = destPlatform.y - target.radius - 0.01;
+
+    // Mark abduct state
+    target.abducting = true;
+    target.abductTarget = { x: destX, y: destY };
+
+    // Tell everyone to render abduction effect
+    io.emit("abductStart", { id: targetId });
+  }
+  if (p.class === "scientist") {
+    if (!p.shrunk) { // prevent stacking
+      p.shrunk = true;
+      p.radius *= 0.5;     // shrink body size
+      p.hitRadius *= 0.5;  // shrink hitbox
+
+      // reset after 10s
+      setTimeout(() => {
+        if (players[socket.id]) {
+          players[socket.id].radius /= 0.5
+          players[socket.id].hitRadius /= 0.5;
+          players[socket.id].shrunk = false;
+        }
+      }, 10000);
+    }
+  }
 });  
 
   socket.on("disconnect", () => {
@@ -586,8 +648,7 @@ io.on("connection", socket => {
     }
   }
 });
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-

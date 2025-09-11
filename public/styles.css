@@ -246,6 +246,51 @@ body.joined #ability-ui:hover:not(.disabled) {
   z-index: 2;
 }
 
+.class-option[data-class="mole"] {
+  overflow: visible;        /* allow sticking out */
+  display: flex;            /* use flexbox to center */
+  justify-content: center;  /* center horizontally */
+  align-items: flex-start;  /* align to the top of button */
+}
+
+.class-option[data-class="mole"] img {
+  width: 160%;          /* smaller than the button */
+  height: auto;
+  position: relative;
+  top: -37px;
+  z-index: 2;
+}
+
+.class-option[data-class="alien"] {
+  overflow: visible;        /* allow sticking out */
+  display: flex;            /* use flexbox to center */
+  justify-content: center;  /* center horizontally */
+  align-items: flex-start;  /* align to the top of button */
+}
+
+.class-option[data-class="alien"] img {
+  width: 140%;          /* smaller than the button */
+  height: auto;
+  position: relative;
+  top: -25px;
+  z-index: 2;
+}
+
+.class-option[data-class="scientist"] {
+  overflow: visible;        /* allow sticking out */
+  display: flex;            /* use flexbox to center */
+  justify-content: center;  /* center horizontally */
+  align-items: flex-start;  /* align to the top of button */
+}
+
+.class-option[data-class="scientist"] img {
+  width: 155%;          /* smaller than the button */
+  height: auto;
+  position: relative;
+  top: -35px;
+  z-index: 2;
+}
+
 .class-option[data-class="snowman"] {
   overflow: visible;        /* allow sticking out */
   display: flex;            /* use flexbox to center */

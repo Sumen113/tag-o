@@ -28,11 +28,17 @@ const classImages = {
   ninja: new Image(),
   monkey: new Image(),
   clown: new Image(),
+  mole: new Image(),
+  alien: new Image(),
+  scientist: new Image(),
   snowman: new Image()   // 👈 add this
 };
 classImages.snowman.src = "./images/snowman.png"; // make sure the file exists
 classImages.ninja.src = "./images/ninja.png"; // make sure this file exists
 classImages.monkey.src = "./images/monkey.png"; // make sure this file exists
+classImages.alien.src = "./images/alien.png"; // make sure this file exists
+classImages.mole.src = "./images/mole.png"; // make sure this file exists
+classImages.scientist.src = "./images/scientist.png"; // make sure this file exists
 classImages.clown.src = "./images/clown.png"; // make sure this file exists
 
 // Platform texture
@@ -41,6 +47,9 @@ grassBlockImg.src = "./images/grass.png";
 
 const moonBlockImg = new Image();
 moonBlockImg.src = "./images/moon.png";
+
+const abductImg = new Image();
+abductImg.src = "./images/abduct.png"; // 👈 make sure this exists
 
 // Portal image
 const portalImg = new Image();
@@ -90,6 +99,9 @@ joinBtn.addEventListener('click', () => {
   abilityUI.style.background = "rgba(0,123,255,0.8)";
   if (playerClass === "ninja") abilityName.innerText = "Invisibility";
   if (playerClass === "monkey") abilityName.innerText = "Grapple";  
+  if (playerClass === "mole") abilityName.innerText = "Dig";  
+  if (playerClass === "alien") abilityName.innerText = "Abduct";  
+  if (playerClass === "scientist") abilityName.innerText = "Shrink";  
   if (playerClass === "clown") abilityName.innerText = "Confetti";  
   if (playerClass === "snowman") abilityName.innerText = "Freeze";
   abilityTimer.innerText = "Ready";
@@ -136,6 +148,18 @@ function tryActivateAbility() {
   if (playerClass === "monkey") {
     abilityCooldown = 55; // seconds
     startAbilityCooldownUI("Grapple");
+  }
+  if (playerClass === "mole") {
+    abilityCooldown = 15; // seconds
+    startAbilityCooldownUI("Dig");
+  }
+  if (playerClass === "alien") {
+    abilityCooldown = 55; // seconds
+    startAbilityCooldownUI("Abduct");
+  }
+  if (playerClass === "scientist") {
+    abilityCooldown = 80; // seconds
+    startAbilityCooldownUI("shrink");
   }
   if (playerClass === "snowman") {
     abilityCooldown = 75; // seconds
@@ -270,6 +294,13 @@ socket.on("mapVoteStart", ({ maps, names }) => {
   }
 
   document.body.appendChild(voteUI);
+});
+
+let abductingPlayers = {};
+
+socket.on("abductStart", ({ id }) => {
+  abductingPlayers[id] = true;
+  setTimeout(() => delete abductingPlayers[id], 4000); // effect lasts while gliding
 });
 
 socket.on("mapVoteUpdate", tally => {
@@ -500,7 +531,19 @@ for (let id in players) {
   if (p.class === "monkey") {
     radius *= 1.37;
   }
-  
+  if (p.class === "alien") {
+    radius *= 1.30;
+  }
+  if (p.class === "mole") {
+    radius *= 1.37;
+  }
+  if (p.class === "scientist") {
+    if (p.shrunk) {
+      radius *= 0.75; // draw smaller when shrunk
+    } else {
+      radius *= 1.50; // normal big scientist
+    }
+  }  
   if (p.class === "clown") {
     radius *= 1.50
   }
@@ -532,13 +575,32 @@ for (let id in players) {
     if (p.class === "snowman") {
       yOffset = -radius * 0.32; // move clown image up by ~15% of its size
     }
+    if (p.class === "alien") {
+      yOffset = -radius * 0.22; // move clown image up by ~15% of its size
+    }
     if (p.class === "clown") {
+      yOffset = -radius * 0.33; // move clown image up by ~15% of its size
+    }
+    if (p.class === "scientist") {
       yOffset = -radius * 0.30; // move clown image up by ~15% of its size
     }
+    if (p.class === "scientist") {
+      if (p.shrunk) {
+        yOffset = -radius * -0.1; // move clown image up by ~15% of its size
+      } else {
+        yOffset = -radius * 0.33; // move clown image up by ~15% of its size
+      }
+    }  
     
     ctx.drawImage(img, pos.x - radius, pos.y - radius + yOffset, size, size);
+    ctx.restore(); // 👈 close the clipping BEFORE drawing beam
     
-    ctx.restore();
+    // If abducted, draw abduct beam on top (not clipped)
+    if (abductingPlayers[id] && abductImg.complete) {
+      const beamSize = size * 1.8; // a bit bigger so it covers
+      ctx.drawImage(abductImg, pos.x - beamSize/2, pos.y - beamSize, beamSize, beamSize);
+    }
+    
     ctx.globalAlpha = 1.0; // reset alpha after drawing    
   } else {
     // fallback if image not ready
@@ -596,11 +658,13 @@ for (let id in players) {
     
     ctx.font = `${14 * camera.zoom}px Quicksand`;
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'white';
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
     ctx.strokeText(p.name, pos.x, pos.y - radius - 10);
-    ctx.fillText(p.name, pos.x, pos.y - radius - 10);
+    
+    // Use custom color if set
+    ctx.fillStyle = p.color || 'white';
+    ctx.fillText(p.name, pos.x, pos.y - radius - 10);    
   }
 
   // HUD (fixed)
