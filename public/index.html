@@ -8,7 +8,40 @@
 </head>
 <body>
   <div id="join-screen">
-    <h1>DO UR WORK</h1>   
+    <h1>TAG ONLINE</h1>
+    <input id="name" type="text" maxlength="12" placeholder="Enter your name">
+    <div class="class-choices">
+      <button class="class-option" data-class="ninja">
+        <img src="images/ninja.png" alt="Ninja">
+      </button>
+      <button class="class-option" data-class="monkey">
+        <img src="images/monkey.png" alt="Monkey">
+      </button>
+      <button class="class-option" data-class="clown">
+        <img src="images/clown.png" alt="clown">
+      </button>
+      <button class="class-option" data-class="snowman">
+        <img src="images/snowman.png" alt="snowman">
+      </button>
+      <button class="class-option" data-class="mole">
+        <img src="images/mole.png" alt="mole">
+      </button>
+      <button class="class-option" data-class="alien">
+        <img src="images/alien.png" alt="alien">
+      </button>
+      <button class="class-option" data-class="scientist">
+        <img src="images/scientist.png" alt="scientist">
+      </button>
+    </div>    
+
+    <button id="join-btn" disabled>Join</button>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="ability-ui" class="disabled">
+    <div id="ability-name">waiting...</div>
+    <div id="ability-timer">Ready</div>
   </div>
   
   <div id="overlay-message"></div>
