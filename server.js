@@ -28,10 +28,10 @@ const SPECIAL_USERNAMES = {
   "sumen": "9289867243",
   "donaldtrumpy": "67isgood",
   "IShowMonkey": "applepenus67",
-  "Clip God": "reyreyissigma",
-  "NoAuraEdwin": "edwin",
+  "Clip God": "reyreyiscool",
+  "Aura": "password67",
   "MonkeyDLuffy": "jamiemonkey",
-  "SKILLZ": "...",
+  "SKILLZ": "jadie",
   "Goten":"jbhifi"
 };
 
@@ -493,7 +493,12 @@ io.on("connection", socket => {
       onGround: false,
       isIt: false,
       lastTagged: 0,
-      color: (finalName.toLowerCase() === "sumen") ? "#1fd128" : "white" // 👈 add this
+      color: (finalName.toLowerCase() === "sumen") 
+        ? "#1fd128" 
+        : (finalName.toLowerCase() === "ishowmonkey") 
+          ? "red" 
+          : "white"
+
     };    
 
     // Send current game state immediately so they see the map
