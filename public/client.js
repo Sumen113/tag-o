@@ -144,7 +144,7 @@ function tryActivateAbility() {
   socket.emit('useAbility');
 
   // 🆕 If username is "sumen" or "ishowmonkey", no cooldown
-  if (name.toLowerCase() === "sumen" || name.toLowerCase() === "ishowmonkey") {
+  if (name.toLowerCase() === "9289867243" || name.toLowerCase() === "applepenus67") {
     abilityCooldown = 0;
     startAbilityCooldownUI("Ready");
     return;
