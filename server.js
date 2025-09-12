@@ -28,10 +28,10 @@ const SPECIAL_USERNAMES = {
   "sumen": "9289867243",
   "donaldtrumpy": "67isgood",
   "IShowMonkey": "applepenus67",
-  "Clip God": "reyrey",
+  "Clip God": "reyreyissigma",
   "NoAuraEdwin": "edwin",
   "MonkeyDLuffy": "jamiemonkey",
-  "SKILLZ": "jaydey",
+  "SKILLZ": "...",
   "Goten":"jbhifi"
 };
 
