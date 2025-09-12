@@ -140,36 +140,46 @@ window.addEventListener("keydown", e => {
 function tryActivateAbility() {
   if (!joined) return;
   if (abilityCooldown > 0) return; 
+
   socket.emit('useAbility');
+
+  // 🆕 If username is "sumen" or "ishowmonkey", no cooldown
+  if (name.toLowerCase() === "sumen" || name.toLowerCase() === "ishowmonkey") {
+    abilityCooldown = 0;
+    startAbilityCooldownUI("Ready");
+    return;
+  }
+
   if (playerClass === "ninja") {
-    abilityCooldown = 60; // seconds
+    abilityCooldown = 60;
     startAbilityCooldownUI("Invisibility");
   }
   if (playerClass === "monkey") {
-    abilityCooldown = 55; // seconds
+    abilityCooldown = 55;
     startAbilityCooldownUI("Grapple");
   }
   if (playerClass === "mole") {
-    abilityCooldown = 15; // seconds
+    abilityCooldown = 15;
     startAbilityCooldownUI("Dig");
   }
   if (playerClass === "alien") {
-    abilityCooldown = 55; // seconds
+    abilityCooldown = 55;
     startAbilityCooldownUI("Abduct");
   }
   if (playerClass === "scientist") {
-    abilityCooldown = 80; // seconds
-    startAbilityCooldownUI("shrink");
+    abilityCooldown = 80;
+    startAbilityCooldownUI("Shrink");
   }
   if (playerClass === "snowman") {
-    abilityCooldown = 75; // seconds
+    abilityCooldown = 75;
     startAbilityCooldownUI("Freeze");
   }
   if (playerClass === "clown") {
-    abilityCooldown = 40; // seconds
+    abilityCooldown = 40;
     startAbilityCooldownUI("Confetti");
   }
 }
+
 
 function startConfetti(duration) {
   confettiParticles = [];
@@ -192,8 +202,14 @@ function startConfetti(duration) {
 function startAbilityCooldownUI(name) {
   abilityUI.classList.add("disabled");
   abilityName.textContent = name;
-  abilityTimer.textContent = abilityCooldown;
 
+  if (abilityCooldown <= 0) {
+    abilityTimer.textContent = "Ready";
+    abilityUI.classList.remove("disabled");
+    return;
+  }
+
+  abilityTimer.textContent = abilityCooldown;
   const cdInterval = setInterval(() => {
     abilityCooldown--;
     abilityTimer.textContent = abilityCooldown > 0 ? abilityCooldown : "Ready";
@@ -204,6 +220,7 @@ function startAbilityCooldownUI(name) {
     }
   }, 1000);
 }
+
 
 // Server updates
 let portals = [];
