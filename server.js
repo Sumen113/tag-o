@@ -497,7 +497,9 @@ io.on("connection", socket => {
         ? "#1fd128" 
         : (finalName.toLowerCase() === "ishowmonkey") 
           ? "red" 
-          : "white"
+          : (finalName.toLowerCase() === "donaldtrumpy") 
+            ? "#FFD700" 
+            : "white"
 
     };    
 
